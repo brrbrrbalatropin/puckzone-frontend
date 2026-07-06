@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login/Login'
 import Register from './pages/Register/Register'
 import Lobby from './pages/Lobby/Lobby'
+import Waiting from './pages/Waiting/Waiting'
 import { useAuth } from './hooks/useAuth'
 
 /**
@@ -42,6 +43,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Lobby />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/waiting"
+        element={
+          <ProtectedRoute>
+            <Waiting />
           </ProtectedRoute>
         }
       />

@@ -125,3 +125,127 @@ input:focus {
   font-size: 0.85rem;
   color: var(--accent);
 }
+
+/* Layout de pantallas autenticadas */
+.app-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.8rem 1.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid #1f2937;
+}
+
+.header-logo {
+  font-size: 1.3rem;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.header-nav {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+
+.header-nav a {
+  color: var(--text);
+  text-decoration: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+}
+
+.header-nav a:hover {
+  color: var(--accent);
+}
+
+.header-nav a.active {
+  color: var(--accent);
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.9rem;
+}
+
+/* Lobby */
+.lobby-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem 1rem;
+}
+
+.player-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.5rem 2rem;
+  background: var(--surface);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.player-university {
+  margin: 0 0 1rem;
+  color: var(--accent-2);
+}
+
+.player-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 1rem;
+}
+
+.player-stats > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.player-no-stats {
+  margin: 0;
+}
+
+.play-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.play-button {
+  font-size: 1.3rem;
+  padding: 1rem 3rem;
+  border-width: 2px;
+}
+
+.play-hint {
+  margin: 0;
+  max-width: 340px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
