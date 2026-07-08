@@ -144,7 +144,7 @@ export default function Game() {
 
         {ui.status === 'FINISHED' && (
           <div className="game-overlay">
-            <h2>{myScore > rivalScore ? '¡Ganaste! 🏆' : 'Perdiste 😞'}</h2>
+            <h2>{myScore > rivalScore ? '¡Ganaste!' : 'Perdiste'}</h2>
             <p>
               {myScore} — {rivalScore} contra {rivalName}
             </p>
