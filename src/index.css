@@ -295,3 +295,79 @@ input:focus {
 .waiting-university {
   color: var(--accent-2);
 }
+
+/* Pantalla de juego */
+.game-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.game-hud {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  font-size: 1.2rem;
+}
+
+.game-hud strong {
+  font-size: 1.6rem;
+}
+
+.game-player.me strong {
+  color: var(--accent);
+}
+
+.game-player.rival strong {
+  color: var(--accent-2);
+}
+
+.game-vs {
+  color: #9ca3af;
+}
+
+.game-board-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+}
+
+.game-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  cursor: none;
+  touch-action: none;
+}
+
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: rgba(10, 10, 15, 0.75);
+  border-radius: 10px;
+  font-size: 1.2rem;
+}
+
+.game-back {
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.game-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  text-align: center;
+}
