@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.auto.tfvars
+*.tfplan
+tfplan
+# (.terraform.lock.hcl SI se versiona, no ignorarlo)
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
