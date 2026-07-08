@@ -1,28 +1,31 @@
 import { useEffect, useState } from 'react'
 import Header from '../../components/Header'
 import { useAuth } from '../../hooks/useAuth'
-import { getPlayer } from '../../services/rankingService'
+import { getPlayer, getPlayerMatches } from '../../services/rankingService'
 
 /**
- * Perfil del usuario: datos de la cuenta (de la sesión/JWT) y estadísticas
- * competitivas de ranking. Solo lectura: no hay backend de edición.
- * Sin partidas todavía → ranking devuelve 404 y se muestran los valores
- * iniciales (ELO 1200), igual que en el lobby.
+ * Perfil del usuario: datos de la cuenta (de la sesión/JWT), estadísticas
+ * competitivas y el historial de partidas. Solo lectura.
+ * Las partidas vs bot aparecen en el historial con "+0 · vs IA": no mueven
+ * ELO ni cuentan en V-D. Sin partidas → ranking devuelve 404 y se muestran
+ * los valores iniciales (ELO 1200); la posición es null si solo ha jugado
+ * contra el bot (no está rankeado).
  */
 export default function Profile() {
   const { user } = useAuth()
 
   const [stats, setStats] = useState(null)
+  const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    getPlayer(user.userId)
-      .then((data) => {
-        if (!cancelled) setStats(data)
-      })
-      .catch(() => {
-        if (!cancelled) setStats(null)
+    Promise.allSettled([getPlayer(user.userId), getPlayerMatches(user.userId)])
+      .then(([statsResult, matchesResult]) => {
+        if (cancelled) return
+        // 404 = sin partidas humanas todavía; se muestran valores iniciales
+        setStats(statsResult.status === 'fulfilled' ? statsResult.value : null)
+        setMatches(matchesResult.status === 'fulfilled' ? matchesResult.value : [])
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -68,7 +71,9 @@ export default function Profile() {
                   <span className="stat-label">ELO</span>
                 </div>
                 <div>
-                  <span className="stat-value">{stats ? `#${stats.position}` : '—'}</span>
+                  <span className="stat-value">
+                    {stats?.position != null ? `#${stats.position}` : '—'}
+                  </span>
                   <span className="stat-label">Posición</span>
                 </div>
                 <div>
@@ -82,12 +87,39 @@ export default function Profile() {
                   <span className="stat-label">Victorias</span>
                 </div>
               </div>
-              {!stats && (
-                <p className="profile-hint">
-                  Aún no tienes partidas registradas: estos son los valores iniciales.
-                </p>
-              )}
+              <p className="profile-hint">
+                Las estadísticas solo cuentan partidas contra humanos; contra la
+                IA se juega sin apuesta de ELO.
+              </p>
             </>
+          )}
+        </section>
+
+        <section className="profile-card">
+          <h2>Historial</h2>
+          {loading ? (
+            <p className="ranking-empty">Cargando…</p>
+          ) : matches.length === 0 ? (
+            <p className="ranking-empty">Aún no has jugado partidas.</p>
+          ) : (
+            <ul className="match-history">
+              {matches.map((m) => (
+                <li key={m.matchId} className={m.won ? 'won' : 'lost'}>
+                  <span className="match-result">{m.won ? 'Victoria' : 'Derrota'}</span>
+                  <span className="match-rival">
+                    vs {m.vsBot ? 'IA' : m.opponentUsername}
+                  </span>
+                  <span className="match-score">
+                    {m.myScore} - {m.rivalScore}
+                  </span>
+                  <span className={`match-elo ${m.vsBot ? 'neutral' : m.won ? 'gain' : 'loss'}`}>
+                    {m.vsBot
+                      ? '+0 · vs IA'
+                      : `${m.eloChange > 0 ? '+' : ''}${m.eloChange}`}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       </main>

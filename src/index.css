@@ -485,3 +485,80 @@ input:focus {
   font-size: 0.85rem;
   color: #9ca3af;
 }
+
+/* Boton de aceptar el bot en la sala de espera */
+.waiting-bot {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.waiting-bot:hover:not(:disabled) {
+  background: var(--accent-2);
+  color: var(--bg);
+}
+
+/* Historial de partidas del perfil */
+.match-history {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.match-history li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  padding: 0.55rem 0.2rem;
+  border-bottom: 1px solid #1f2937;
+  font-size: 0.95rem;
+}
+
+.match-history li:last-child {
+  border-bottom: none;
+}
+
+.match-result {
+  width: 4.6rem;
+  font-weight: bold;
+}
+
+.match-history li.won .match-result {
+  color: var(--accent);
+}
+
+.match-history li.lost .match-result {
+  color: var(--accent-2);
+}
+
+.match-rival {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.match-score {
+  color: #9ca3af;
+}
+
+.match-elo {
+  min-width: 4.5rem;
+  text-align: right;
+  font-weight: bold;
+}
+
+.match-elo.gain {
+  color: var(--accent);
+}
+
+.match-elo.loss {
+  color: var(--accent-2);
+}
+
+.match-elo.neutral {
+  color: #9ca3af;
+  font-weight: normal;
+  font-size: 0.85rem;
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getQueueStatus, leaveQueue } from '../../services/matchmakingService'
+import { getQueueStatus, leaveQueue, playBot } from '../../services/matchmakingService'
 
 const POLL_INTERVAL_MS = 1500
 const MATCHED_PAUSE_MS = 1500
@@ -11,7 +11,9 @@ const MAX_NOT_IN_QUEUE = 3
 
 /**
  * Sala de espera: pollea el estado de la cola cada 1.5s hasta MATCHED.
- * - WAITING: spinner + contador de segundos (el que reporta el servidor).
+ * - WAITING: spinner + contador; pasado el timeout el servidor manda
+ *   botAvailable y aparece la opción de jugar contra el bot (el jugador
+ *   decide: seguir esperando humano, aceptar el bot o cancelar).
  * - MATCHED: muestra el rival (o BOT) y navega a /game/{matchId} tras una pausa.
  * - NOT_IN_QUEUE persistente: no hay sala en camino → de vuelta al lobby.
  * Los errores de red transitorios no detienen el polling.
@@ -20,9 +22,20 @@ export default function Waiting() {
   const navigate = useNavigate()
 
   const [seconds, setSeconds] = useState(0)
+  const [botOffer, setBotOffer] = useState(false)
   const [match, setMatch] = useState(null)
   const stoppedRef = useRef(false)
+  const intervalRef = useRef(null)
   const notInQueueRef = useRef(0)
+
+  const goToMatch = (foundMatch) => {
+    stoppedRef.current = true
+    clearInterval(intervalRef.current)
+    setMatch(foundMatch)
+    setTimeout(() => {
+      navigate(`/game/${foundMatch.matchId}`, { replace: true })
+    }, MATCHED_PAUSE_MS)
+  }
 
   useEffect(() => {
     stoppedRef.current = false
@@ -38,36 +51,44 @@ export default function Waiting() {
       if (stoppedRef.current) return
 
       if (status.status === 'MATCHED') {
-        stoppedRef.current = true
-        clearInterval(intervalId)
-        setMatch(status.match)
-        setTimeout(() => {
-          navigate(`/game/${status.match.matchId}`, { replace: true })
-        }, MATCHED_PAUSE_MS)
+        goToMatch(status.match)
       } else if (status.status === 'NOT_IN_QUEUE') {
         notInQueueRef.current += 1
         if (notInQueueRef.current >= MAX_NOT_IN_QUEUE) {
           stoppedRef.current = true
-          clearInterval(intervalId)
+          clearInterval(intervalRef.current)
           navigate('/', { replace: true })
         }
       } else {
         notInQueueRef.current = 0
         setSeconds(status.secondsWaiting ?? 0)
+        setBotOffer(Boolean(status.botAvailable))
       }
     }
 
-    const intervalId = setInterval(poll, POLL_INTERVAL_MS)
+    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
     poll()
 
     return () => {
       stoppedRef.current = true
-      clearInterval(intervalId)
+      clearInterval(intervalRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate])
+
+  const handlePlayBot = async () => {
+    try {
+      const status = await playBot()
+      goToMatch(status.match)
+    } catch {
+      // 409: ya no estaba en cola (quizá lo emparejó un humano);
+      // el polling resuelve solo (MATCHED o NOT_IN_QUEUE).
+    }
+  }
 
   const handleCancel = async () => {
     stoppedRef.current = true
+    clearInterval(intervalRef.current)
     try {
       await leaveQueue()
     } finally {
@@ -103,9 +124,19 @@ export default function Waiting() {
             <h2>Buscando rival…</h2>
             <div className="waiting-spinner" aria-label="Buscando" />
             <p className="waiting-seconds">{seconds}s en cola</p>
-            <p className="waiting-hint">
-              Si no aparece un rival en 10 segundos, jugarás contra el bot.
-            </p>
+            {botOffer ? (
+              <>
+                <p className="waiting-hint">
+                  No aparece un rival todavía. Puedes seguir esperando o jugar
+                  contra el bot (no afecta tu ELO).
+                </p>
+                <button type="button" className="waiting-bot" onClick={handlePlayBot}>
+                  Jugar contra el bot
+                </button>
+              </>
+            ) : (
+              <p className="waiting-hint">Emparejando por nivel…</p>
+            )}
             <button type="button" onClick={handleCancel}>
               Cancelar
             </button>

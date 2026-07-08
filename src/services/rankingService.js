@@ -22,3 +22,10 @@ export async function getUniversityRanking() {
   const { data } = await api.get('/api/ranking/university')
   return data
 }
+
+// [{matchId, opponentUsername, vsBot, won, myScore, rivalScore, eloChange, playedAt}]
+// Las partidas vs bot vienen con eloChange 0 (no afectan ELO ni V-D).
+export async function getPlayerMatches(userId, limit = 20) {
+  const { data } = await api.get(`/api/ranking/player/${userId}/matches`, { params: { limit } })
+  return data
+}

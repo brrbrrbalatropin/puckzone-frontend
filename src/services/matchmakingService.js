@@ -24,3 +24,10 @@ export async function getQueueStatus() {
 export async function leaveQueue() {
   await api.delete('/api/matching')
 }
+
+// Acepta la oferta de jugar vs bot (tras el timeout): 201 {status:"MATCHED", match}
+// 409 si ya no estaba en cola (p. ej. justo lo emparejó un humano y expiró la sala)
+export async function playBot() {
+  const { data } = await api.post('/api/matching/bot')
+  return data
+}
