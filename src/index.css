@@ -371,3 +371,117 @@ input:focus {
   color: #9ca3af;
   text-align: center;
 }
+
+/* Ranking */
+.ranking-main {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.ranking-tabs {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.ranking-tabs button.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ranking-table th,
+.ranking-table td {
+  padding: 0.6rem 0.9rem;
+  text-align: center;
+  border-bottom: 1px solid #1f2937;
+}
+
+.ranking-table .col-left {
+  text-align: left;
+}
+
+.ranking-table th {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9ca3af;
+}
+
+.ranking-table .col-elo {
+  color: var(--accent);
+  font-weight: bold;
+}
+
+.ranking-table tr.me td {
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.me-tag {
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.ranking-empty {
+  margin: 0;
+  color: #9ca3af;
+}
+
+/* Perfil */
+.profile-main {
+  flex: 1;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.profile-card {
+  padding: 1.5rem 2rem;
+  background: var(--surface);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+}
+
+.profile-data {
+  margin: 1rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.profile-data div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.profile-data dt {
+  color: #9ca3af;
+}
+
+.profile-data dd {
+  margin: 0;
+}
+
+.profile-hint {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}

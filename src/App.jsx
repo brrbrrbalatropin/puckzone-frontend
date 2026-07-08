@@ -5,6 +5,8 @@ import Register from './pages/Register/Register'
 import Lobby from './pages/Lobby/Lobby'
 import Waiting from './pages/Waiting/Waiting'
 import Game from './pages/Game/Game'
+import Ranking from './pages/Ranking/Ranking'
+import Profile from './pages/Profile/Profile'
 import { useAuth } from './hooks/useAuth'
 
 /**
@@ -60,6 +62,22 @@ function App() {
         element={
           <ProtectedRoute>
             <Game />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ranking"
+        element={
+          <ProtectedRoute>
+            <Ranking />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         }
       />
