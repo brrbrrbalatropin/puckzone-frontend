@@ -4,6 +4,7 @@ import Login from './pages/Login/Login'
 import Register from './pages/Register/Register'
 import Lobby from './pages/Lobby/Lobby'
 import Waiting from './pages/Waiting/Waiting'
+import Game from './pages/Game/Game'
 import { useAuth } from './hooks/useAuth'
 
 /**
@@ -51,6 +52,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Waiting />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/game/:matchId"
+        element={
+          <ProtectedRoute>
+            <Game />
           </ProtectedRoute>
         }
       />

@@ -249,3 +249,49 @@ input:focus {
   font-size: 0.85rem;
   color: #9ca3af;
 }
+
+/* Sala de espera */
+.waiting-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+  text-align: center;
+}
+
+.waiting-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #1f2937;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: waiting-spin 0.9s linear infinite;
+}
+
+@keyframes waiting-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.waiting-seconds {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--accent);
+}
+
+.waiting-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.waiting-opponent {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.waiting-university {
+  color: var(--accent-2);
+}
