@@ -330,6 +330,23 @@ input:focus {
   color: #9ca3af;
 }
 
+.game-ping {
+  font-size: 0.8rem;
+  align-self: center;
+}
+
+.game-ping.good {
+  color: var(--accent);
+}
+
+.game-ping.mid {
+  color: #eab308;
+}
+
+.game-ping.bad {
+  color: var(--accent-2);
+}
+
 .game-board-wrap {
   position: relative;
   width: 100%;

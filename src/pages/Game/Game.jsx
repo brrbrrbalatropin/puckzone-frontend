@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { usePing } from '../../hooks/usePing'
 import { createGameConnection } from '../../services/gameSocket'
 
 // Dimensiones lógicas del motor de física (puckzone-game). El canvas usa
@@ -31,6 +32,7 @@ const SNAP_DIST = 200
 export default function Game() {
   const { matchId } = useParams()
   const { user, token } = useAuth()
+  const ping = usePing()
 
   const canvasRef = useRef(null)
   const stateRef = useRef(null)
@@ -152,6 +154,12 @@ export default function Game() {
         <span className="game-vs">—</span>
         <span className="game-player rival">
           <strong>{rivalScore}</strong> {rivalName}
+        </span>
+        <span
+          className={`game-ping ${ping === null ? 'bad' : ping < 80 ? 'good' : ping < 150 ? 'mid' : 'bad'}`}
+          title="Latencia hacia el servidor"
+        >
+          · {ping === null ? '— ' : ping}ms
         </span>
       </header>
 
