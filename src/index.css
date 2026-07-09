@@ -389,6 +389,78 @@ input:focus {
   text-align: center;
 }
 
+/* Emotes */
+.emote-bar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.emote-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.7rem;
+  border-color: #374151;
+}
+
+.emote-button:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--accent);
+  color: inherit;
+}
+
+.emote-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+  font-weight: bold;
+}
+
+.emote-key {
+  font-size: 0.65rem;
+  color: #9ca3af;
+}
+
+.emote-bubble {
+  position: absolute;
+  top: 8%;
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--text);
+  pointer-events: none;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  animation: emote-pop 2.5s ease-out forwards;
+}
+
+.emote-bubble.left {
+  left: 12%;
+}
+
+.emote-bubble.right {
+  right: 12%;
+}
+
+@keyframes emote-pop {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  12% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  20% {
+    transform: scale(1);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95) translateY(-12px);
+    opacity: 0;
+  }
+}
+
 /* Ranking */
 .ranking-main {
   flex: 1;

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePing } from '../../hooks/usePing'
@@ -18,6 +18,17 @@ const PADDLE_SEND_MS = 16
 // 60ms ≈ 4 estados de buffer: suficiente contra jitter sin agregar más
 // retardo del necesario (la paleta propia también carga este delay).
 const INTERP_DELAY_MS = 60
+// Emotes: ids de la lista blanca del servidor, en orden de hotkey (1-6).
+const EMOTES = [
+  { id: 'THUMBS_UP', icon: '👍' },
+  { id: 'LAUGH', icon: '😂' },
+  { id: 'WOW', icon: '😮' },
+  { id: 'CRY', icon: '😭' },
+  { id: 'ANGRY', icon: '😡' },
+  { id: 'GG', icon: 'GG' },
+]
+// Cuánto vive la burbuja en pantalla; el server además tiene cooldown de 1s.
+const EMOTE_BUBBLE_MS = 2500
 // Un salto mayor a esto es un teletransporte legítimo (saque tras gol):
 // se pinta directo en vez de barrer la cancha interpolando.
 const SNAP_DIST = 200
@@ -54,12 +65,30 @@ export default function Game() {
     opponentType: null,
   })
   const [connected, setConnected] = useState(false)
+  // Burbujas de emote por mitad de cancha; `key` distingue emisiones para
+  // reiniciar la animación y para que el timeout no borre una burbuja nueva.
+  const [bubbles, setBubbles] = useState({ left: null, right: null })
+  const bubbleSeqRef = useRef(0)
+  const lastEmoteSentRef = useRef(0)
 
   useEffect(() => {
     const connection = createGameConnection({
       gameId: matchId,
       userId: user.userId,
       token,
+      onEmote: ({ userId: senderId, emote }) => {
+        const icon = EMOTES.find((e) => e.id === emote)?.icon
+        const p1Id = currRef.current?.s?.player1?.userId
+        if (!icon || !p1Id) return
+        const side = senderId === p1Id ? 'left' : 'right'
+        const key = ++bubbleSeqRef.current
+        setBubbles((prev) => ({ ...prev, [side]: { icon, key } }))
+        setTimeout(() => {
+          setBubbles((prev) =>
+            prev[side]?.key === key ? { ...prev, [side]: null } : prev,
+          )
+        }, EMOTE_BUBBLE_MS)
+      },
       onState: (state) => {
         prevRef.current = currRef.current
         currRef.current = { s: state, t: performance.now() }
@@ -127,6 +156,27 @@ export default function Game() {
     return () => cancelAnimationFrame(frameId)
   }, [user.userId])
 
+  // Solo toca refs: identidad estable, sirve para botones y hotkeys.
+  const sendEmote = useCallback((emoteId) => {
+    const now = performance.now()
+    // Mismo cooldown que el servidor: evita mandar lo que igual descartaría.
+    if (now - lastEmoteSentRef.current < 1000) return
+    lastEmoteSentRef.current = now
+    connectionRef.current?.sendEmote(emoteId)
+  }, [])
+
+  // Hotkeys 1-6 para los emotes.
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      const index = Number(event.key) - 1
+      if (index >= 0 && index < EMOTES.length) {
+        sendEmote(EMOTES[index].id)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [sendEmote])
+
   const iAmPlayer1 = !ui.player1UserId || ui.player1UserId === user.userId
   const rivalName =
     ui.opponentType === 'BOT'
@@ -178,6 +228,32 @@ export default function Game() {
             </Link>
           </div>
         )}
+
+        {bubbles.left && (
+          <span key={bubbles.left.key} className="emote-bubble left">
+            {bubbles.left.icon}
+          </span>
+        )}
+        {bubbles.right && (
+          <span key={bubbles.right.key} className="emote-bubble right">
+            {bubbles.right.icon}
+          </span>
+        )}
+      </div>
+
+      <div className="emote-bar">
+        {EMOTES.map((emote, index) => (
+          <button
+            key={emote.id}
+            type="button"
+            className="emote-button"
+            title={`Tecla ${index + 1}`}
+            onClick={() => sendEmote(emote.id)}
+          >
+            <span className="emote-icon">{emote.icon}</span>
+            <span className="emote-key">{index + 1}</span>
+          </button>
+        ))}
       </div>
 
       <p className="game-hint">
