@@ -15,7 +15,9 @@ const PADDLE_R = 30
 const PADDLE_SEND_MS = 16
 // Interpolación: se renderiza este margen "en el pasado", entre los dos
 // últimos estados recibidos — el jitter de red deja de verse como saltos.
-const INTERP_DELAY_MS = 100
+// 60ms ≈ 4 estados de buffer: suficiente contra jitter sin agregar más
+// retardo del necesario (la paleta propia también carga este delay).
+const INTERP_DELAY_MS = 60
 // Un salto mayor a esto es un teletransporte legítimo (saque tras gol):
 // se pinta directo en vez de barrer la cancha interpolando.
 const SNAP_DIST = 200
@@ -23,10 +25,10 @@ const SNAP_DIST = 200
 /**
  * La cancha. El estado llega a ~60Hz por /topic/game/{id} y vive en refs:
  * el canvas se repinta con requestAnimationFrame INTERPOLANDO entre los dos
- * últimos estados (fluidez ante jitter de red). La paleta propia se predice
- * localmente (se dibuja donde está el mouse, con el mismo recorte del
- * servidor) para que responda sin esperar el round-trip; el disco y el rival
- * son 100% del servidor, que sigue siendo autoritativo.
+ * últimos estados (fluidez ante jitter de red). TODO se pinta desde el
+ * servidor, incluida la paleta propia: se probó predecirla localmente y los
+ * golpes se veían erráticos (el disco "del pasado" chocaba contra una paleta
+ * "del presente" — dos líneas de tiempo en pantalla). Coherencia > respuesta.
  * React solo re-renderiza con cambios de status/marcador (overlays y HUD).
  */
 export default function Game() {
@@ -35,10 +37,8 @@ export default function Game() {
   const ping = usePing()
 
   const canvasRef = useRef(null)
-  const stateRef = useRef(null)
   const prevRef = useRef(null) // {s, t}: estado anterior y cuándo llegó
   const currRef = useRef(null) // {s, t}: último estado y cuándo llegó
-  const myPaddleRef = useRef(null) // predicción local {x, y}
   const connectionRef = useRef(null)
   const lastSentRef = useRef(0)
 
@@ -61,7 +61,6 @@ export default function Game() {
       userId: user.userId,
       token,
       onState: (state) => {
-        stateRef.current = state
         prevRef.current = currRef.current
         currRef.current = { s: state, t: performance.now() }
         setUi((prev) =>
@@ -104,15 +103,6 @@ export default function Game() {
       const x = ((event.clientX - rect.left) / rect.width) * BOARD_W
       const y = ((event.clientY - rect.top) / rect.height) * BOARD_H
 
-      // Predicción local con el MISMO recorte que aplica el servidor.
-      const state = stateRef.current
-      const iAmP1 = !state || state.player1?.userId === user.userId
-      myPaddleRef.current = {
-        x: clamp(x, iAmP1 ? PADDLE_R : BOARD_W / 2 + PADDLE_R,
-          iAmP1 ? BOARD_W / 2 - PADDLE_R : BOARD_W - PADDLE_R),
-        y: clamp(y, PADDLE_R, BOARD_H - PADDLE_R),
-      }
-
       const now = performance.now()
       if (now - lastSentRef.current < PADDLE_SEND_MS) return
       lastSentRef.current = now
@@ -129,7 +119,7 @@ export default function Game() {
       const canvas = canvasRef.current
       if (canvas) {
         const renderState = interpolate(prevRef.current, currRef.current)
-        drawBoard(canvas.getContext('2d'), renderState, user.userId, myPaddleRef.current)
+        drawBoard(canvas.getContext('2d'), renderState, user.userId)
       }
       frameId = requestAnimationFrame(draw)
     }
@@ -230,8 +220,8 @@ function interpolate(prev, curr) {
   }
 }
 
-/** Pinta el tablero; la paleta propia usa la predicción local si existe. */
-function drawBoard(ctx, state, myUserId, myPredicted) {
+/** Pinta el tablero completo desde el estado interpolado del servidor. */
+function drawBoard(ctx, state, myUserId) {
   // Fondo y borde
   ctx.fillStyle = '#0d1220'
   ctx.fillRect(0, 0, BOARD_W, BOARD_H)
@@ -270,18 +260,9 @@ function drawBoard(ctx, state, myUserId, myPredicted) {
   const myColor = '#00d4ff'
   const rivalColor = '#ff0080'
 
-  // Mi paleta en la posición predicha (respuesta inmediata al mouse);
-  // la del rival en la posición interpolada del servidor.
-  const my = myPredicted ?? {
-    x: iAmPlayer1 ? state.paddle1X : state.paddle2X,
-    y: iAmPlayer1 ? state.paddle1Y : state.paddle2Y,
-  }
-  const rival = {
-    x: iAmPlayer1 ? state.paddle2X : state.paddle1X,
-    y: iAmPlayer1 ? state.paddle2Y : state.paddle1Y,
-  }
-  drawPaddle(ctx, my.x, my.y, myColor)
-  drawPaddle(ctx, rival.x, rival.y, rivalColor)
+  // Ambas paletas desde el servidor: lo que ves es lo que colisiona.
+  drawPaddle(ctx, state.paddle1X, state.paddle1Y, iAmPlayer1 ? myColor : rivalColor)
+  drawPaddle(ctx, state.paddle2X, state.paddle2Y, iAmPlayer1 ? rivalColor : myColor)
 
   // Disco
   ctx.beginPath()
