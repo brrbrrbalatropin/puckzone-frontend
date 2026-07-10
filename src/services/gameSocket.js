@@ -12,8 +12,12 @@ import { API_URL } from './api'
  * envían inputs y se recibe el GameState que pinta el canvas.
  */
 export function createGameConnection({ gameId, userId, token, onState, onEmote, onConnectionChange }) {
+  // El token se lee de localStorage EN CADA intento de conexión: si el
+  // interceptor de api.js refrescó la sesión, el estado de React (el
+  // parámetro `token`) puede traer el access viejo ya vencido.
+  const currentToken = () => localStorage.getItem('puckzone_token') || token
   const client = new Client({
-    webSocketFactory: () => new SockJS(`${API_URL}/ws?token=${encodeURIComponent(token)}`),
+    webSocketFactory: () => new SockJS(`${API_URL}/ws?token=${encodeURIComponent(currentToken())}`),
     reconnectDelay: 2000,
 
     onConnect: () => {

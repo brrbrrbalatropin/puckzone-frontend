@@ -22,7 +22,9 @@ function loadStoredSession() {
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(loadStoredSession)
 
-  // authResponse = { token, username, university } de register o login
+  // authResponse = { token, refreshToken, username, university } de register o login.
+  // El refresh token solo lo consume el interceptor de api.js cuando el
+  // access (1h) vence; por eso no hace falta tenerlo en el estado de React.
   const login = (authResponse) => {
     const claims = decodeJwt(authResponse.token) || {}
     const user = {
@@ -32,12 +34,14 @@ export function AuthProvider({ children }) {
       email: claims.email,
     }
     localStorage.setItem('puckzone_token', authResponse.token)
+    localStorage.setItem('puckzone_refresh_token', authResponse.refreshToken)
     localStorage.setItem('puckzone_user', JSON.stringify(user))
     setSession({ token: authResponse.token, user })
   }
 
   const logout = () => {
     localStorage.removeItem('puckzone_token')
+    localStorage.removeItem('puckzone_refresh_token')
     localStorage.removeItem('puckzone_user')
     setSession({ token: null, user: null })
   }

@@ -18,20 +18,64 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Si el gateway responde 401 (token vencido o invalido) se limpia la sesion
-// y se vuelve al login. Se excluyen los endpoints de auth: ahi el 401 es
+// Refresh compartido: si varios requests reciben 401 a la vez (el lobby y la
+// sala de espera pollean), solo se dispara UN POST /refresh y todos esperan
+// el mismo resultado. Va con axios pelado (no `api`) para no recursar los
+// interceptores de esta instancia.
+let refreshPromise = null
+
+function refreshSession() {
+  if (!refreshPromise) {
+    const refreshToken = localStorage.getItem('puckzone_refresh_token')
+    if (!refreshToken) {
+      return Promise.reject(new Error('sin refresh token'))
+    }
+    refreshPromise = axios
+      .post(`${API_URL}/api/auth/refresh`, { refreshToken }, { timeout: 10000 })
+      .then(({ data }) => {
+        localStorage.setItem('puckzone_token', data.token)
+        localStorage.setItem('puckzone_refresh_token', data.refreshToken)
+        return data.token
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+function endSession() {
+  localStorage.removeItem('puckzone_token')
+  localStorage.removeItem('puckzone_refresh_token')
+  localStorage.removeItem('puckzone_user')
+  window.location.href = '/login'
+}
+
+// 401 en ruta protegida = access token vencido (dura 1h): se renueva con el
+// refresh token y se reintenta la peticion original una sola vez (_retry
+// evita bucles). Solo si el refresh tambien falla se limpia la sesion y se
+// vuelve al login. Se excluyen los endpoints de auth: ahi el 401 es
 // "credenciales malas" y lo maneja la propia pantalla.
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error.response?.status
     const url = error.config?.url || ''
-    if (status === 401 && !url.startsWith('/api/auth/')) {
-      localStorage.removeItem('puckzone_token')
-      localStorage.removeItem('puckzone_user')
-      window.location.href = '/login'
+    if (status !== 401 || url.startsWith('/api/auth/')) {
+      return Promise.reject(error)
     }
-    return Promise.reject(error)
+    if (error.config._retry) {
+      endSession()
+      return Promise.reject(error)
+    }
+    error.config._retry = true
+    try {
+      await refreshSession()
+      return api.request(error.config)
+    } catch {
+      endSession()
+      return Promise.reject(error)
+    }
   },
 )
 
