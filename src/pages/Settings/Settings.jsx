@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Header from '../../components/Header'
 import { useSettings } from '../../hooks/useSettings'
-import { AUDIO_CHANNELS } from '../../store/SettingsContext'
+import { AUDIO_CHANNELS } from '../../store/settings-context'
 
 /**
  * Pantalla de ajustes. Sliders de audio (musica, efectos, microfono y voz)
@@ -63,9 +63,11 @@ export default function Settings() {
 
   // El slider de microfono escala el medidor en vivo sin re-crear el test.
   const micGain = settings.micIn.muted ? 0 : settings.micIn.volume / 100
-  if (micResources.current) {
-    micResources.current.gain = micGain
-  }
+  useEffect(() => {
+    if (micResources.current) {
+      micResources.current.gain = micGain
+    }
+  }, [micGain])
 
   // Apagar el test al salir de la pantalla (libera el mic del navegador).
   useEffect(() => stopMicTest, [])

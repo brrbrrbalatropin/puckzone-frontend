@@ -7,14 +7,8 @@ import { SettingsContext } from './settings-context'
  * contexto es la unica fuente de verdad de volumenes para no tener que
  * migrar nada cuando existan. Cada canal tiene volumen 0-100 y silencio
  * independiente, asi silenciar no pierde el volumen elegido.
+ * (La lista de canales vive en settings-context.js como AUDIO_CHANNELS.)
  */
-export const AUDIO_CHANNELS = [
-  { id: 'music', label: 'Música', hint: 'Banda sonora del juego (próximamente)' },
-  { id: 'sfx', label: 'Efectos de sonido', hint: 'Golpes, goles y poderes (próximamente)' },
-  { id: 'micIn', label: 'Micrófono', hint: 'Tu voz en el chat de voz (próximamente)' },
-  { id: 'voiceOut', label: 'Voz de los demás', hint: 'Volumen al que escuchas a tu rival (próximamente)' },
-]
-
 const DEFAULT_SETTINGS = {
   music: { volume: 70, muted: false },
   sfx: { volume: 80, muted: false },
