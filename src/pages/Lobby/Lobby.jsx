@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../../components/Header'
 import { useAuth } from '../../hooks/useAuth'
+import { getActiveGame } from '../../services/gameService'
 import { joinQueue } from '../../services/matchmakingService'
 import { getPlayer } from '../../services/rankingService'
 
 /**
  * Pantalla principal tras el login. Muestra las estadisticas del jugador
  * (ELO, W/L, posicion global) y el boton para buscar partida, que lo mete
- * a la cola de matchmaking y lo lleva a la sala de espera.
+ * a la cola de matchmaking y lo lleva a la sala de espera. Si el jugador
+ * tiene una partida viva (cerro la pestana a mitad de juego), se le ofrece
+ * volver antes de que la ventana de gracia lo de por abandonado.
  */
 export default function Lobby() {
   const navigate = useNavigate()
@@ -18,6 +21,21 @@ export default function Lobby() {
   const [statsLoading, setStatsLoading] = useState(true)
   const [error, setError] = useState('')
   const [searching, setSearching] = useState(false)
+  const [activeGame, setActiveGame] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getActiveGame()
+      .then((game) => {
+        if (!cancelled) setActiveGame(game)
+      })
+      .catch(() => {
+        // Sin oferta de reconexion si falla; no bloquea el lobby.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -90,6 +108,37 @@ export default function Lobby() {
             </p>
           )}
         </section>
+
+        {activeGame && (
+          <section className="reconnect-card">
+            <h3>Tienes una partida en curso</h3>
+            <p>
+              Contra{' '}
+              <strong>
+                {activeGame.opponentType === 'BOT'
+                  ? 'el BOT'
+                  : activeGame.opponentUsername}
+              </strong>
+              , vas {activeGame.myScore} — {activeGame.opponentScore}. Si no
+              vuelves, perderás por abandono.
+            </p>
+            <div className="reconnect-actions">
+              <button
+                type="button"
+                onClick={() => navigate(`/game/${activeGame.gameId}`)}
+              >
+                Volver a la partida
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setActiveGame(null)}
+              >
+                Ignorar
+              </button>
+            </div>
+          </section>
+        )}
 
         <section className="play-section">
           <button

@@ -651,3 +651,58 @@ input:focus {
   font-weight: normal;
   font-size: 0.85rem;
 }
+
+/* Reconexion (lobby) y rendicion (juego) */
+.reconnect-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.2rem 2rem;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.reconnect-card h3 {
+  margin: 0 0 0.4rem;
+  color: var(--accent);
+}
+
+.reconnect-card p {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.reconnect-actions,
+.confirm-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.ghost-button {
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+.ghost-button:hover:not(:disabled) {
+  background: #374151;
+  color: var(--text);
+}
+
+.surrender-button {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.surrender-button:hover:not(:disabled) {
+  background: var(--accent-2);
+  color: var(--bg);
+}
+
+.finish-detail {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}

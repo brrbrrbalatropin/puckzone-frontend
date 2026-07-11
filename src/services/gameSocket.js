@@ -51,6 +51,18 @@ export function createGameConnection({ gameId, userId, token, onState, onEmote, 
       })
     },
 
+    /**
+     * Rendición YA confirmada por el usuario (el "¿estás seguro?" es de la
+     * UI): el servidor cierra la partida a favor del rival de inmediato.
+     */
+    sendSurrender() {
+      if (!client.connected) return
+      client.publish({
+        destination: `/app/game/${gameId}/surrender`,
+        body: '{}',
+      })
+    },
+
     /** Id de emote de la lista blanca del servidor (THUMBS_UP, LAUGH, ...). */
     sendEmote(emote) {
       if (!client.connected) return

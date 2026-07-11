@@ -63,8 +63,17 @@ export default function Game() {
     player1Username: null,
     player2Username: null,
     opponentType: null,
+    winnerId: null,
+    finishReason: null,
+    graceDeadlineEpochMs: 0,
   })
   const [connected, setConnected] = useState(false)
+  // Confirmación de rendición ("¿estás seguro?"); el servidor solo recibe
+  // el surrender ya confirmado.
+  const [confirmSurrender, setConfirmSurrender] = useState(false)
+  // Reloj para la cuenta regresiva de la pausa; solo avanza (por timer)
+  // mientras la partida está pausada.
+  const [nowMs, setNowMs] = useState(0)
   // Burbujas de emote por mitad de cancha; `key` distingue emisiones para
   // reiniciar la animación y para que el timeout no borre una burbuja nueva.
   const [bubbles, setBubbles] = useState({ left: null, right: null })
@@ -106,6 +115,9 @@ export default function Game() {
                 player1Username: state.player1?.username ?? null,
                 player2Username: state.player2?.username ?? null,
                 opponentType: state.opponentType,
+                winnerId: state.winnerId ?? null,
+                finishReason: state.finishReason ?? null,
+                graceDeadlineEpochMs: state.graceDeadlineEpochMs ?? 0,
               },
         )
       },
@@ -165,6 +177,17 @@ export default function Game() {
     connectionRef.current?.sendEmote(emoteId)
   }, [])
 
+  useEffect(() => {
+    if (ui.status !== 'PAUSED') return undefined
+    const update = () => setNowMs(Date.now())
+    const timeoutId = setTimeout(update, 0)
+    const intervalId = setInterval(update, 500)
+    return () => {
+      clearTimeout(timeoutId)
+      clearInterval(intervalId)
+    }
+  }, [ui.status])
+
   // Hotkeys 1-6 para los emotes.
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -184,6 +207,23 @@ export default function Game() {
       : ((iAmPlayer1 ? ui.player2Username : ui.player1Username) ?? 'Rival')
   const myScore = iAmPlayer1 ? ui.score1 : ui.score2
   const rivalScore = iAmPlayer1 ? ui.score2 : ui.score1
+  const iWon = ui.winnerId ? ui.winnerId === user.userId : myScore > rivalScore
+  const finishDetail =
+    ui.finishReason === 'SURRENDER'
+      ? iWon
+        ? 'Tu rival se rindió.'
+        : 'Te rendiste.'
+      : ui.finishReason === 'DISCONNECT'
+        ? iWon
+          ? 'Tu rival abandonó la partida.'
+          : 'Perdiste por abandono.'
+        : null
+  const canSurrender =
+    connected && (ui.status === 'PLAYING' || ui.status === 'PAUSED')
+  const graceLeft =
+    ui.status === 'PAUSED' && ui.graceDeadlineEpochMs && nowMs
+      ? Math.max(0, Math.ceil((ui.graceDeadlineEpochMs - nowMs) / 1000))
+      : null
 
   return (
     <div className="game-page">
@@ -217,15 +257,48 @@ export default function Game() {
           </div>
         )}
 
+        {connected && ui.status === 'PAUSED' && (
+          <div className="game-overlay">
+            <h2>Rival desconectado</h2>
+            <p>
+              Si no vuelve{graceLeft !== null ? ` en ${graceLeft}s` : ' a tiempo'},
+              ganas por abandono.
+            </p>
+          </div>
+        )}
+
         {ui.status === 'FINISHED' && (
           <div className="game-overlay">
-            <h2>{myScore > rivalScore ? '¡Ganaste!' : 'Perdiste'}</h2>
+            <h2>{iWon ? '¡Ganaste!' : 'Perdiste'}</h2>
+            {finishDetail && <p className="finish-detail">{finishDetail}</p>}
             <p>
               {myScore} — {rivalScore} contra {rivalName}
             </p>
             <Link to="/" className="game-back">
               Volver al lobby
             </Link>
+          </div>
+        )}
+
+        {confirmSurrender && ui.status !== 'FINISHED' && (
+          <div className="game-overlay">
+            <h2>¿Rendirse?</h2>
+            <p>Tu rival ganará la partida.</p>
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="surrender-button"
+                onClick={() => {
+                  connectionRef.current?.sendSurrender()
+                  setConfirmSurrender(false)
+                }}
+              >
+                Sí, rendirme
+              </button>
+              <button type="button" onClick={() => setConfirmSurrender(false)}>
+                Seguir jugando
+              </button>
+            </div>
           </div>
         )}
 
@@ -254,6 +327,15 @@ export default function Game() {
             <span className="emote-key">{index + 1}</span>
           </button>
         ))}
+        {canSurrender && (
+          <button
+            type="button"
+            className="surrender-button"
+            onClick={() => setConfirmSurrender(true)}
+          >
+            Rendirse
+          </button>
+        )}
       </div>
 
       <p className="game-hint">
