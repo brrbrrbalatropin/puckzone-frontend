@@ -177,15 +177,217 @@ input:focus {
   font-size: 0.9rem;
 }
 
-/* Lobby */
+/* Lobby: leaderboard | jugador+buscar partida | chat */
 .lobby-main {
   flex: 1;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.lobby-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 2rem;
-  padding: 2rem 1rem;
+  padding-top: 2rem;
+}
+
+/* En pantallas angostas las columnas se apilan: centro, top y chat */
+@media (max-width: 900px) {
+  .lobby-main {
+    grid-template-columns: 1fr;
+  }
+
+  .lobby-center {
+    order: -1;
+    padding-top: 0;
+  }
+}
+
+/* Leaderboard del lobby */
+.lobby-leaderboard {
+  padding: 1.2rem 1.4rem;
+  background: var(--surface);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+}
+
+.lobby-leaderboard h3 {
+  color: var(--accent);
+}
+
+.leaderboard-list {
+  list-style: none;
+  margin: 0.6rem 0;
+  padding: 0;
+}
+
+.leaderboard-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.4rem 0.3rem;
+  border-bottom: 1px solid #1f2937;
+  font-size: 0.92rem;
+}
+
+.leaderboard-list li:last-child {
+  border-bottom: none;
+}
+
+.leaderboard-list li.me {
+  background: rgba(0, 212, 255, 0.08);
+  border-radius: 6px;
+}
+
+.leaderboard-pos {
+  min-width: 1.8rem;
+  color: #9ca3af;
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-elo {
+  font-weight: bold;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-empty {
+  margin: 0.6rem 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.leaderboard-more {
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+/* Chat del lobby */
+.lobby-chat {
+  display: flex;
+  flex-direction: column;
+  height: 460px;
+  background: var(--surface);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #1f2937;
+}
+
+.chat-channel {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.chat-status {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.chat-status.on {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.8);
+}
+
+.chat-status.off {
+  background: #6b7280;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.7rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.chat-empty {
+  margin: auto;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+
+.chat-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.chat-author {
+  color: var(--accent);
+}
+
+.chat-msg.mine .chat-author {
+  color: var(--accent-2);
+}
+
+.chat-uni {
+  color: #9ca3af;
+}
+
+.chat-time {
+  margin-left: auto;
+  color: #6b7280;
+  font-size: 0.7rem;
+}
+
+.chat-text {
+  overflow-wrap: anywhere;
+}
+
+.chat-form {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border-top: 1px solid #1f2937;
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.chat-form button {
+  padding: 0.45rem 0.9rem;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .player-card {

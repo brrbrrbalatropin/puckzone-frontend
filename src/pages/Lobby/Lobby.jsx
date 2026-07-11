@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../../components/Header'
+import LobbyChat from '../../components/LobbyChat'
+import LobbyLeaderboard from '../../components/LobbyLeaderboard'
 import { useAuth } from '../../hooks/useAuth'
 import { getActiveGame } from '../../services/gameService'
 import { joinQueue } from '../../services/matchmakingService'
 import { getPlayer } from '../../services/rankingService'
 
 /**
- * Pantalla principal tras el login. Muestra las estadisticas del jugador
- * (ELO, W/L, posicion global) y el boton para buscar partida, que lo mete
- * a la cola de matchmaking y lo lleva a la sala de espera. Si el jugador
- * tiene una partida viva (cerro la pestana a mitad de juego), se le ofrece
- * volver antes de que la ventana de gracia lo de por abandonado.
+ * Pantalla principal tras el login, a tres columnas: vistazo del
+ * leaderboard, tarjeta del jugador con el boton de buscar partida, y chat
+ * global. Si el jugador tiene una partida viva (cerro la pestana a mitad
+ * de juego), se le ofrece volver antes de que la ventana de gracia lo de
+ * por abandonado. En pantallas angostas las columnas se apilan.
  */
 export default function Lobby() {
   const navigate = useNavigate()
@@ -77,84 +79,90 @@ export default function Lobby() {
       <Header />
 
       <main className="lobby-main">
-        <section className="player-card">
-          <h2>{user.username}</h2>
-          <p className="player-university">{user.university}</p>
+        <LobbyLeaderboard />
 
-          {statsLoading ? (
-            <p>Cargando estadísticas…</p>
-          ) : stats ? (
-            <div className="player-stats">
-              <div>
-                <span className="stat-value">{stats.elo}</span>
-                <span className="stat-label">ELO</span>
-              </div>
-              <div>
-                <span className="stat-value">#{stats.position}</span>
-                <span className="stat-label">Global</span>
-              </div>
-              <div>
-                <span className="stat-value">{stats.wins}</span>
-                <span className="stat-label">Victorias</span>
-              </div>
-              <div>
-                <span className="stat-value">{stats.losses}</span>
-                <span className="stat-label">Derrotas</span>
-              </div>
-            </div>
-          ) : (
-            <p className="player-no-stats">
-              Aún no tienes partidas. ELO inicial: <strong>1200</strong>
-            </p>
-          )}
-        </section>
+        <div className="lobby-center">
+          <section className="player-card">
+            <h2>{user.username}</h2>
+            <p className="player-university">{user.university}</p>
 
-        {activeGame && (
-          <section className="reconnect-card">
-            <h3>Tienes una partida en curso</h3>
-            <p>
-              Contra{' '}
-              <strong>
-                {activeGame.opponentType === 'BOT'
-                  ? 'el BOT'
-                  : activeGame.opponentUsername}
-              </strong>
-              , vas {activeGame.myScore} — {activeGame.opponentScore}. Si no
-              vuelves, perderás por abandono.
-            </p>
-            <div className="reconnect-actions">
-              <button
-                type="button"
-                onClick={() => navigate(`/game/${activeGame.gameId}`)}
-              >
-                Volver a la partida
-              </button>
-              <button
-                type="button"
-                className="ghost-button"
-                onClick={() => setActiveGame(null)}
-              >
-                Ignorar
-              </button>
-            </div>
+            {statsLoading ? (
+              <p>Cargando estadísticas…</p>
+            ) : stats ? (
+              <div className="player-stats">
+                <div>
+                  <span className="stat-value">{stats.elo}</span>
+                  <span className="stat-label">ELO</span>
+                </div>
+                <div>
+                  <span className="stat-value">#{stats.position}</span>
+                  <span className="stat-label">Global</span>
+                </div>
+                <div>
+                  <span className="stat-value">{stats.wins}</span>
+                  <span className="stat-label">Victorias</span>
+                </div>
+                <div>
+                  <span className="stat-value">{stats.losses}</span>
+                  <span className="stat-label">Derrotas</span>
+                </div>
+              </div>
+            ) : (
+              <p className="player-no-stats">
+                Aún no tienes partidas. ELO inicial: <strong>1200</strong>
+              </p>
+            )}
           </section>
-        )}
 
-        <section className="play-section">
-          <button
-            type="button"
-            className="play-button"
-            onClick={handlePlay}
-            disabled={searching}
-          >
-            {searching ? 'Entrando a la cola…' : 'Buscar partida'}
-          </button>
-          <p className="play-hint">
-            Se busca rival de tu nivel; si en 10 segundos no aparece, juegas
-            contra un bot.
-          </p>
-          {error && <p className="form-error">{error}</p>}
-        </section>
+          {activeGame && (
+            <section className="reconnect-card">
+              <h3>Tienes una partida en curso</h3>
+              <p>
+                Contra{' '}
+                <strong>
+                  {activeGame.opponentType === 'BOT'
+                    ? 'el BOT'
+                    : activeGame.opponentUsername}
+                </strong>
+                , vas {activeGame.myScore} — {activeGame.opponentScore}. Si no
+                vuelves, perderás por abandono.
+              </p>
+              <div className="reconnect-actions">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/game/${activeGame.gameId}`)}
+                >
+                  Volver a la partida
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => setActiveGame(null)}
+                >
+                  Ignorar
+                </button>
+              </div>
+            </section>
+          )}
+
+          <section className="play-section">
+            <button
+              type="button"
+              className="play-button"
+              onClick={handlePlay}
+              disabled={searching}
+            >
+              {searching ? 'Entrando a la cola…' : 'Buscar partida'}
+            </button>
+            <p className="play-hint">
+              Se busca rival de tu nivel; si en 10 segundos no aparece, juegas
+              contra un bot.
+            </p>
+            {error && <p className="form-error">{error}</p>}
+          </section>
+        </div>
+
+        <LobbyChat />
       </main>
     </div>
   )
