@@ -442,8 +442,11 @@ function drawBoard(ctx, state, myUserId) {
   drawPaddle(ctx, state.paddle2X, state.paddle2Y,
     iAmPlayer1 ? rivalColor : myColor, state.paddle2Radius || PADDLE_R)
 
-  // Disco (el fantasma no se pinta hasta que rebote)
+  // Disco. Con el fantasma activo solo aparece en los destellos que dejan
+  // los rebotes, y semi-transparente: se intuye la dirección, nada más.
   if (state.puckVisible !== false) {
+    const ghosting = (state.effects ?? []).some((e) => e.type === 'GHOST_PUCK')
+    if (ghosting) ctx.globalAlpha = 0.55
     ctx.beginPath()
     ctx.arc(state.puckX, state.puckY, PUCK_R, 0, Math.PI * 2)
     ctx.fillStyle = '#e0e0e0'
@@ -451,6 +454,7 @@ function drawBoard(ctx, state, myUserId) {
     ctx.shadowBlur = 12
     ctx.fill()
     ctx.shadowBlur = 0
+    ctx.globalAlpha = 1
   }
 
   drawPowerBadges(ctx, state)
@@ -516,7 +520,11 @@ function drawPickup(ctx, state) {
 function drawPowerBadges(ctx, state) {
   const badges = []
   if (state.chaosArmed) badges.push('💥 Caos: el próximo golpe sale al doble')
-  if (state.puckVisible === false) badges.push('👻 Disco fantasma: reaparece al rebotar')
+  // Del listado de efectos y no de puckVisible: el badge no debe parpadear
+  // con cada destello del disco.
+  if ((state.effects ?? []).some((e) => e.type === 'GHOST_PUCK')) {
+    badges.push('👻 Disco fantasma: se asoma en los rebotes')
+  }
   badges.forEach((text, index) => {
     const y = 18 + index * 26
     ctx.font = '13px system-ui'
