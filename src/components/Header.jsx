@@ -23,6 +23,9 @@ export default function Header() {
       </nav>
 
       <div className="header-user">
+        <NavLink to="/settings" className="header-settings">
+          Ajustes
+        </NavLink>
         <span>
           {user?.username} <small>({user?.university})</small>
         </span>

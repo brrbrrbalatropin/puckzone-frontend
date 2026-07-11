@@ -7,6 +7,7 @@ import Waiting from './pages/Waiting/Waiting'
 import Game from './pages/Game/Game'
 import Ranking from './pages/Ranking/Ranking'
 import Profile from './pages/Profile/Profile'
+import Settings from './pages/Settings/Settings'
 import { useAuth } from './hooks/useAuth'
 
 /**
@@ -78,6 +79,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />

@@ -652,6 +652,166 @@ input:focus {
   font-size: 0.85rem;
 }
 
+/* Ajustes */
+.header-settings {
+  color: var(--text);
+  text-decoration: none;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.header-settings:hover {
+  color: var(--accent);
+}
+
+.header-settings.active {
+  color: var(--accent);
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.settings-main {
+  flex: 1;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.settings-card {
+  padding: 1.5rem 2rem;
+  background: var(--surface);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+}
+
+.settings-hint {
+  margin: 0 0 1.2rem;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid #1f2937;
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-labels {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.setting-name {
+  font-weight: bold;
+}
+
+.setting-desc {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.setting-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-shrink: 0;
+}
+
+.setting-row.muted input[type='range'],
+.setting-row.muted .setting-value {
+  opacity: 0.4;
+}
+
+.mute-button {
+  padding: 0.25rem 0.45rem;
+  border-color: #374151;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.mute-button:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--accent);
+}
+
+.setting-value {
+  min-width: 3rem;
+  text-align: right;
+  font-size: 0.9rem;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Slider con relleno hasta el valor (--fill lo pone el componente) */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 160px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--accent) var(--fill, 50%),
+    #374151 var(--fill, 50%)
+  );
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+}
+
+.mic-test {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mic-meter {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: #374151;
+  overflow: hidden;
+}
+
+.mic-meter-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(to right, var(--accent), var(--accent-2));
+  transition: width 60ms linear;
+}
+
 /* Reconexion (lobby) y rendicion (juego) */
 .reconnect-card {
   width: 100%;
