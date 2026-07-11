@@ -458,6 +458,27 @@ function drawBoard(ctx, state, myUserId) {
   }
 
   drawPowerBadges(ctx, state)
+  drawGoalBanner(ctx, state)
+}
+
+/**
+ * Anuncio a mitad de cancha mientras el saque está retenido: quién anotó
+ * (o "¡A jugar!" en el arranque). El servidor manda serveAtEpochMs y no
+ * saca antes de eso, así que el banner y la pausa terminan a la vez.
+ */
+function drawGoalBanner(ctx, state) {
+  if (!state.serveAtEpochMs || Date.now() >= state.serveAtEpochMs) return
+  const scorer =
+    state.lastScorer === 1 ? state.player1 : state.lastScorer === 2 ? state.player2 : null
+  const text = state.lastScorer ? `¡Gol de ${scorer?.username ?? 'BOT'}!` : '¡A jugar!'
+
+  ctx.fillStyle = 'rgba(10, 10, 15, 0.65)'
+  ctx.fillRect(0, BOARD_H / 2 - 46, BOARD_W, 92)
+  ctx.font = 'bold 42px system-ui'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = '#ffd54a'
+  ctx.fillText(text, BOARD_W / 2, BOARD_H / 2)
 }
 
 /** Zonas translúcidas y obstáculos sólidos, anclados donde estaba el pickup. */
