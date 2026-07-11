@@ -31,3 +31,31 @@ export async function playBot() {
   const { data } = await api.post('/api/matching/bot')
   return data
 }
+
+/*
+ * Salas privadas con código (partidas amistosas, sin ELO).
+ * El anfitrión crea y pollea su status; el amigo se une con el código.
+ */
+
+// 201 {status:"WAITING", code} — crear de nuevo renueva el código
+export async function createPrivateRoom() {
+  const { data } = await api.post('/api/matching/private')
+  return data
+}
+
+// {status:"WAITING"|"MATCHED"|"NONE", code?, match?}
+export async function getPrivateRoomStatus() {
+  const { data } = await api.get('/api/matching/private/status')
+  return data
+}
+
+// 204, idempotente
+export async function cancelPrivateRoom() {
+  await api.delete('/api/matching/private')
+}
+
+// 201 {status:"MATCHED", match} | 404 código inválido/vencido/usado | 409 sala propia
+export async function joinPrivateRoom(code) {
+  const { data } = await api.post(`/api/matching/private/${encodeURIComponent(code)}/join`)
+  return data
+}

@@ -444,6 +444,19 @@ input:focus {
   border-width: 2px;
 }
 
+/* Directo contra el bot, en el rosado de la marca */
+.bot-button {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+  font-size: 1.05rem;
+  padding: 0.7rem 2.2rem;
+}
+
+.bot-button:hover:not(:disabled) {
+  background: var(--accent-2);
+  color: var(--bg);
+}
+
 .play-hint {
   margin: 0;
   max-width: 340px;
@@ -1012,6 +1025,102 @@ input[type='range']::-moz-range-thumb {
   border-radius: 6px;
   background: linear-gradient(to right, var(--accent), var(--accent-2));
   transition: width 60ms linear;
+}
+
+/* Salas privadas */
+.rooms-main {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rooms-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.rooms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+
+@media (max-width: 700px) {
+  .rooms-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rooms-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.5rem 2rem;
+  background: var(--surface);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.rooms-card h3 {
+  margin: 0;
+  color: var(--accent);
+}
+
+.rooms-card-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.room-code {
+  font-size: 2.4rem;
+  font-weight: bold;
+  letter-spacing: 0.35em;
+  padding: 0.5rem 1rem 0.5rem 1.35rem;
+  border: 1px dashed var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.room-wait {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.waiting-spinner.small {
+  width: 18px;
+  height: 18px;
+  border-width: 3px;
+}
+
+.rooms-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.room-join-form {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.room-join-form input {
+  width: 9.5rem;
+  text-align: center;
+  font-size: 1.3rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
 }
 
 /* Reconexion (lobby) y rendicion (juego) */

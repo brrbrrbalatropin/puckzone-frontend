@@ -112,10 +112,14 @@ export default function Profile() {
                   <span className="match-score">
                     {m.myScore} - {m.rivalScore}
                   </span>
-                  <span className={`match-elo ${m.vsBot ? 'neutral' : m.won ? 'gain' : 'loss'}`}>
+                  <span
+                    className={`match-elo ${m.vsBot || m.friendly ? 'neutral' : m.won ? 'gain' : 'loss'}`}
+                  >
                     {m.vsBot
                       ? '+0 · vs IA'
-                      : `${m.eloChange > 0 ? '+' : ''}${m.eloChange}`}
+                      : m.friendly
+                        ? '+0 · amistosa'
+                        : `${m.eloChange > 0 ? '+' : ''}${m.eloChange}`}
                   </span>
                 </li>
               ))}

@@ -5,7 +5,7 @@ import LobbyChat from '../../components/LobbyChat'
 import LobbyLeaderboard from '../../components/LobbyLeaderboard'
 import { useAuth } from '../../hooks/useAuth'
 import { getActiveGame } from '../../services/gameService'
-import { joinQueue } from '../../services/matchmakingService'
+import { joinQueue, playBot } from '../../services/matchmakingService'
 import { getPlayer } from '../../services/rankingService'
 
 /**
@@ -71,6 +71,27 @@ export default function Lobby() {
         setError(err.response?.data?.message || 'No se pudo entrar a la cola.')
         setSearching(false)
       }
+    }
+  }
+
+  // Directo contra el bot, sin sala de espera: entra a la cola (409 = ya
+  // estaba, da igual) y acepta el bot de inmediato. Si justo en ese instante
+  // lo emparejó un humano, matchmaking devuelve esa sala y también sirve.
+  const handlePlayBotNow = async () => {
+    setError('')
+    setSearching(true)
+    try {
+      try {
+        await joinQueue()
+      } catch (err) {
+        if (err.response?.status !== 409) throw err
+      }
+      const status = await playBot()
+      navigate(`/game/${status.match.matchId}`)
+    } catch {
+      // Carrera rara (p. ej. emparejado y la sala aún no está lista):
+      // la sala de espera la resuelve con su polling.
+      navigate('/waiting')
     }
   }
 
@@ -154,9 +175,18 @@ export default function Lobby() {
             >
               {searching ? 'Entrando a la cola…' : 'Buscar partida'}
             </button>
+            <button
+              type="button"
+              className="bot-button"
+              onClick={handlePlayBotNow}
+              disabled={searching}
+            >
+              Jugar contra el bot
+            </button>
             <p className="play-hint">
-              Se busca rival de tu nivel; si en 10 segundos no aparece, juegas
-              contra un bot.
+              Se busca rival de tu nivel; si en 10 segundos no aparece, puedes
+              jugar contra el bot. O entra directo contra el bot (no afecta tu
+              ELO).
             </p>
             {error && <p className="form-error">{error}</p>}
           </section>

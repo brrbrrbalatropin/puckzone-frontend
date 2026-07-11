@@ -8,6 +8,7 @@ import Game from './pages/Game/Game'
 import Ranking from './pages/Ranking/Ranking'
 import Profile from './pages/Profile/Profile'
 import Settings from './pages/Settings/Settings'
+import Rooms from './pages/Rooms/Rooms'
 import { useAuth } from './hooks/useAuth'
 
 /**
@@ -87,6 +88,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/salas"
+        element={
+          <ProtectedRoute>
+            <Rooms />
           </ProtectedRoute>
         }
       />
