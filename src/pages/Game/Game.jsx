@@ -29,6 +29,17 @@ const EMOTES = [
 ]
 // Cuánto vive la burbuja en pantalla; el server además tiene cooldown de 1s.
 const EMOTE_BUBBLE_MS = 2500
+// Poderes: ícono y color por tipo (mismo catálogo del servidor).
+const POWER_META = {
+  OBSTACLE: { icon: '🧱', color: '#9ca3af' },
+  FAST_ZONE: { icon: '⚡', color: '#ffb020' },
+  SLOW_ZONE: { icon: '🐌', color: '#4f7cff' },
+  GHOST_PUCK: { icon: '👻', color: '#c084fc' },
+  SHIELD: { icon: '🛡️', color: '#34d399' },
+  CHAOS: { icon: '💥', color: '#ff5060' },
+}
+// Radio del pickup en el servidor (puckzone.game.power.pickup-radius).
+const PICKUP_R = 18
 // Un salto mayor a esto es un teletransporte legítimo (saque tras gol):
 // se pinta directo en vez de barrer la cancha interpolando.
 const SNAP_DIST = 200
@@ -341,6 +352,8 @@ export default function Game() {
       <p className="game-hint">
         Mueve el mouse (o el dedo) para controlar tu paleta
         {iAmPlayer1 ? ' (lado izquierdo, cian)' : ' (lado derecho, cian)'}. Gana el primero en llegar a 7.
+        Toca los poderes que aparecen en el tablero para activarlos: 🧱 obstáculo,
+        ⚡ zona rápida, 🐌 zona lenta, 👻 disco fantasma, 🛡️ escudo y 💥 caos.
       </p>
     </div>
   )
@@ -414,27 +427,120 @@ function drawBoard(ctx, state, myUserId) {
 
   if (!state) return
 
+  // Poderes: zonas y obstáculo debajo de las piezas, el pickup encima.
+  drawEffects(ctx, state)
+  drawPickup(ctx, state)
+
   const iAmPlayer1 = state.player1?.userId === myUserId
   const myColor = '#00d4ff'
   const rivalColor = '#ff0080'
 
-  // Ambas paletas desde el servidor: lo que ves es lo que colisiona.
-  drawPaddle(ctx, state.paddle1X, state.paddle1Y, iAmPlayer1 ? myColor : rivalColor)
-  drawPaddle(ctx, state.paddle2X, state.paddle2Y, iAmPlayer1 ? rivalColor : myColor)
+  // Ambas paletas desde el servidor (radio incluido: el escudo lo dobla):
+  // lo que ves es lo que colisiona.
+  drawPaddle(ctx, state.paddle1X, state.paddle1Y,
+    iAmPlayer1 ? myColor : rivalColor, state.paddle1Radius || PADDLE_R)
+  drawPaddle(ctx, state.paddle2X, state.paddle2Y,
+    iAmPlayer1 ? rivalColor : myColor, state.paddle2Radius || PADDLE_R)
 
-  // Disco
-  ctx.beginPath()
-  ctx.arc(state.puckX, state.puckY, PUCK_R, 0, Math.PI * 2)
-  ctx.fillStyle = '#e0e0e0'
-  ctx.shadowColor = '#e0e0e0'
-  ctx.shadowBlur = 12
-  ctx.fill()
-  ctx.shadowBlur = 0
+  // Disco (el fantasma no se pinta hasta que rebote)
+  if (state.puckVisible !== false) {
+    ctx.beginPath()
+    ctx.arc(state.puckX, state.puckY, PUCK_R, 0, Math.PI * 2)
+    ctx.fillStyle = '#e0e0e0'
+    ctx.shadowColor = '#e0e0e0'
+    ctx.shadowBlur = 12
+    ctx.fill()
+    ctx.shadowBlur = 0
+  }
+
+  drawPowerBadges(ctx, state)
 }
 
-function drawPaddle(ctx, x, y, color) {
+/** Zonas translúcidas y obstáculos sólidos, anclados donde estaba el pickup. */
+function drawEffects(ctx, state) {
+  for (const effect of state.effects ?? []) {
+    const meta = POWER_META[effect.type]
+    if (!meta) continue
+    if (effect.type === 'FAST_ZONE' || effect.type === 'SLOW_ZONE') {
+      ctx.beginPath()
+      ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2)
+      ctx.fillStyle = `${meta.color}22`
+      ctx.fill()
+      ctx.strokeStyle = `${meta.color}88`
+      ctx.lineWidth = 2
+      ctx.setLineDash([6, 6])
+      ctx.stroke()
+      ctx.setLineDash([])
+      drawIcon(ctx, meta.icon, effect.x, effect.y, 20)
+    } else if (effect.type === 'OBSTACLE') {
+      ctx.beginPath()
+      ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2)
+      ctx.fillStyle = '#374151'
+      ctx.fill()
+      ctx.strokeStyle = '#6b7280'
+      ctx.lineWidth = 3
+      ctx.stroke()
+      drawIcon(ctx, meta.icon, effect.x, effect.y, 22)
+    }
+    // SHIELD no se pinta aquí: se ve en el tamaño de la paleta del dueño.
+  }
+}
+
+/** El pickup parpadea durante el aviso previo; fijo y con brillo cuando ya se puede recoger. */
+function drawPickup(ctx, state) {
+  const pickup = state.pickup
+  if (!pickup) return
+  const meta = POWER_META[pickup.type]
+  if (!meta) return
+
+  const blinking = Date.now() < pickup.activeFromEpochMs
+  // Apagado la mitad del tiempo, ~3 veces por segundo.
+  if (blinking && Math.floor(performance.now() / 180) % 2 === 0) return
+
   ctx.beginPath()
-  ctx.arc(x, y, PADDLE_R, 0, Math.PI * 2)
+  ctx.arc(pickup.x, pickup.y, PICKUP_R, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(17, 24, 39, 0.9)'
+  if (!blinking) {
+    ctx.shadowColor = meta.color
+    ctx.shadowBlur = 14
+  }
+  ctx.fill()
+  ctx.shadowBlur = 0
+  ctx.strokeStyle = meta.color
+  ctx.lineWidth = 2.5
+  ctx.stroke()
+  drawIcon(ctx, meta.icon, pickup.x, pickup.y, 18)
+}
+
+/** Avisos de los poderes sin representación espacial (caos armado, fantasma). */
+function drawPowerBadges(ctx, state) {
+  const badges = []
+  if (state.chaosArmed) badges.push('💥 Caos: el próximo golpe sale al doble')
+  if (state.puckVisible === false) badges.push('👻 Disco fantasma: reaparece al rebotar')
+  badges.forEach((text, index) => {
+    const y = 18 + index * 26
+    ctx.font = '13px system-ui'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const width = ctx.measureText(text).width + 20
+    ctx.fillStyle = 'rgba(13, 18, 32, 0.8)'
+    ctx.fillRect(BOARD_W / 2 - width / 2, y - 11, width, 22)
+    ctx.fillStyle = '#e0e0e0'
+    ctx.fillText(text, BOARD_W / 2, y)
+  })
+}
+
+function drawIcon(ctx, icon, x, y, size) {
+  ctx.font = `${size}px system-ui`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = '#e0e0e0'
+  ctx.fillText(icon, x, y + 1)
+}
+
+function drawPaddle(ctx, x, y, color, radius = PADDLE_R) {
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
   ctx.fillStyle = color
   ctx.shadowColor = color
   ctx.shadowBlur = 16
@@ -442,7 +548,7 @@ function drawPaddle(ctx, x, y, color) {
   ctx.shadowBlur = 0
   // Anillo interior para darle relieve de paleta de air hockey
   ctx.beginPath()
-  ctx.arc(x, y, PADDLE_R * 0.55, 0, Math.PI * 2)
+  ctx.arc(x, y, radius * 0.55, 0, Math.PI * 2)
   ctx.strokeStyle = 'rgba(10, 10, 15, 0.55)'
   ctx.lineWidth = 3
   ctx.stroke()
