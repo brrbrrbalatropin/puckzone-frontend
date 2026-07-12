@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { createLobbyConnection } from '../services/lobbySocket'
+import { userColor } from '../utils/userColor'
 
 const MAX_LENGTH = 200
 // El servidor descarta en silencio mensajes a <500ms del anterior; el botón
@@ -82,7 +83,9 @@ export default function LobbyChat() {
           return (
             <div key={`${msg.sentAtEpochMs}-${i}`} className={`chat-msg${mine ? ' mine' : ''}`}>
               <span className="chat-meta">
-                <strong className="chat-author">{mine ? 'Tú' : msg.username}</strong>
+                <strong className="chat-author" style={{ color: userColor(msg.userId) }}>
+                  {mine ? 'Tú' : msg.username}
+                </strong>
                 {msg.university && <small className="chat-uni">({msg.university})</small>}
                 <small className="chat-time">{formatTime(msg.sentAtEpochMs)}</small>
               </span>

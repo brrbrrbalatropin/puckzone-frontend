@@ -19,6 +19,7 @@ export default function Header() {
           Lobby
         </NavLink>
         <NavLink to="/salas">Salas</NavLink>
+        <NavLink to="/chat">Chat</NavLink>
         <NavLink to="/ranking">Ranking</NavLink>
         <NavLink to="/profile">Perfil</NavLink>
       </nav>

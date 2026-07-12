@@ -9,6 +9,7 @@ import Ranking from './pages/Ranking/Ranking'
 import Profile from './pages/Profile/Profile'
 import Settings from './pages/Settings/Settings'
 import Rooms from './pages/Rooms/Rooms'
+import Chat from './pages/Chat/Chat'
 import { useAuth } from './hooks/useAuth'
 
 /**
@@ -96,6 +97,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Rooms />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute>
+            <Chat />
           </ProtectedRoute>
         }
       />
