@@ -11,7 +11,7 @@ import { API_URL } from './api'
  * partida y publica el join. El servidor es autoritativo: aquí solo se
  * envían inputs y se recibe el GameState que pinta el canvas.
  */
-export function createGameConnection({ gameId, userId, token, onState, onEmote, onConnectionChange }) {
+export function createGameConnection({ gameId, userId, token, onState, onEmote, onVoiceSignal, onConnectionChange }) {
   // El token se lee de localStorage EN CADA intento de conexión: si el
   // interceptor de api.js refrescó la sesión, el estado de React (el
   // parámetro `token`) puede traer el access viejo ya vencido.
@@ -26,6 +26,11 @@ export function createGameConnection({ gameId, userId, token, onState, onEmote, 
       })
       client.subscribe(`/topic/game/${gameId}/emotes`, (frame) => {
         onEmote?.(JSON.parse(frame.body))
+      })
+      // Señalización WebRTC del rival. La cola es personal (una por
+      // usuario, no por sala): el consumidor filtra por gameId.
+      client.subscribe('/user/queue/voice', (frame) => {
+        onVoiceSignal?.(JSON.parse(frame.body))
       })
       client.publish({
         destination: `/app/game/${gameId}/join`,
@@ -60,6 +65,18 @@ export function createGameConnection({ gameId, userId, token, onState, onEmote, 
       client.publish({
         destination: `/app/game/${gameId}/surrender`,
         body: '{}',
+      })
+    },
+
+    /**
+     * Señal WebRTC hacia el rival (READY, OFFER, ANSWER, ICE o LEAVE);
+     * el payload viaja opaco, el servidor solo lo reenvía.
+     */
+    sendVoiceSignal(type, payload) {
+      if (!client.connected) return
+      client.publish({
+        destination: `/app/game/${gameId}/voice`,
+        body: JSON.stringify({ type, payload }),
       })
     },
 

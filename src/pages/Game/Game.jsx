@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePing } from '../../hooks/usePing'
+import { useSettings } from '../../hooks/useSettings'
 import { createGameConnection } from '../../services/gameSocket'
+import { createVoiceChat } from '../../services/voiceChat'
 
 // Dimensiones lógicas del motor de física (puckzone-game). El canvas usa
 // estas y se escala visualmente por CSS; el mouse se convierte de vuelta.
@@ -29,6 +31,17 @@ const EMOTES = [
 ]
 // Cuánto vive la burbuja en pantalla; el server además tiene cooldown de 1s.
 const EMOTE_BUBBLE_MS = 2500
+// Estados del chat de voz (voiceChat.js) traducidos para el jugador.
+const VOICE_LABELS = {
+  'requesting-mic': 'pidiendo micrófono…',
+  'waiting-rival': 'esperando al rival…',
+  connecting: 'conectando…',
+  connected: 'conectada',
+  'listen-only': 'sin micrófono: solo escuchas',
+  'no-mic': 'sin micrófono: solo escucharás',
+  failed: 'no disponible en esta red',
+  'rival-off': 'el rival la cortó',
+}
 // Poderes: ícono y color por tipo (mismo catálogo del servidor).
 const POWER_META = {
   OBSTACLE: { icon: '🧱', color: '#9ca3af' },
@@ -56,6 +69,7 @@ const SNAP_DIST = 200
 export default function Game() {
   const { matchId } = useParams()
   const { user, token } = useAuth()
+  const { settings, effectiveVolume } = useSettings()
   const ping = usePing()
 
   const canvasRef = useRef(null)
@@ -90,6 +104,12 @@ export default function Game() {
   const [bubbles, setBubbles] = useState({ left: null, right: null })
   const bubbleSeqRef = useRef(0)
   const lastEmoteSentRef = useRef(0)
+  // Chat de voz (solo partidas humanas). El módulo WebRTC vive en un ref;
+  // React solo conoce el status para pintar botones. Las señales que
+  // lleguen antes de crear el módulo se guardan y se le entregan después.
+  const voiceRef = useRef(null)
+  const pendingVoiceSignalsRef = useRef([])
+  const [voiceUi, setVoiceUi] = useState({ status: null, micOn: false, deafened: false })
 
   useEffect(() => {
     const connection = createGameConnection({
@@ -132,7 +152,18 @@ export default function Game() {
               },
         )
       },
-      onConnectionChange: setConnected,
+      onVoiceSignal: (signal) => {
+        // La cola /user/queue/voice es por usuario, no por sala.
+        if (signal.gameId !== matchId) return
+        if (voiceRef.current) voiceRef.current.handleSignal(signal)
+        else pendingVoiceSignalsRef.current.push(signal)
+      },
+      onConnectionChange: (isUp) => {
+        setConnected(isUp)
+        // Si nuestro WS se cayó y volvió, el rival no se enteró: la voz
+        // se re-anuncia para renegociar si la llamada no sobrevivió.
+        if (isUp) voiceRef.current?.refresh()
+      },
     })
     connectionRef.current = connection
     return () => {
@@ -140,6 +171,47 @@ export default function Game() {
       connection.disconnect()
     }
   }, [matchId, user.userId, token])
+
+  // La voz arranca cuando el estado revela un rival HUMANO y quién es el
+  // jugador 1 (iniciador de la negociación WebRTC). Contra el bot no hay.
+  useEffect(() => {
+    if (ui.opponentType !== 'HUMAN' || !ui.player1UserId || voiceRef.current) return
+    const voice = createVoiceChat({
+      isInitiator: ui.player1UserId === user.userId,
+      sendSignal: (type, payload) =>
+        connectionRef.current?.sendVoiceSignal(type, payload),
+      onStatusChange: (status) =>
+        setVoiceUi((prev) => ({ ...prev, status })),
+    })
+    voiceRef.current = voice
+    const pending = pendingVoiceSignalsRef.current
+    pendingVoiceSignalsRef.current = []
+    pending.forEach((signal) => voice.handleSignal(signal))
+  }, [ui.opponentType, ui.player1UserId, user.userId])
+
+  // Al terminar la partida la voz se corta; al desmontar también (soltar
+  // el micrófono es importante: si no, el indicador del navegador queda encendido).
+  useEffect(() => {
+    if (ui.status === 'FINISHED') voiceRef.current?.close()
+  }, [ui.status])
+  useEffect(
+    () => () => {
+      voiceRef.current?.close()
+      voiceRef.current = null
+    },
+    [],
+  )
+
+  // Aplica botones + Ajustes al módulo de voz en cada render: el mic suena
+  // solo con el botón activo Y el canal micIn sin silenciar; el volumen de
+  // salida es el del canal voiceOut y los audífonos en off lo enmudecen.
+  useEffect(() => {
+    const voice = voiceRef.current
+    if (!voice) return
+    voice.setMicEnabled(voiceUi.micOn && !settings.micIn.muted)
+    voice.setDeafened(voiceUi.deafened)
+    voice.setOutputVolume(effectiveVolume('voiceOut'))
+  })
 
   // Mouse a nivel de WINDOW: la paleta sigue respondiendo aunque el puntero
   // salga del canvas (antes se congelaba al salir del tablero en desktop).
@@ -199,17 +271,29 @@ export default function Game() {
     }
   }, [ui.status])
 
-  // Hotkeys 1-6 para los emotes.
+  // Solo cambian si la voz existe (status truthy); el effect de arriba
+  // aplica el resultado al módulo WebRTC.
+  const toggleMic = useCallback(() => {
+    setVoiceUi((prev) => (prev.status ? { ...prev, micOn: !prev.micOn } : prev))
+  }, [])
+  const toggleDeafen = useCallback(() => {
+    setVoiceUi((prev) => (prev.status ? { ...prev, deafened: !prev.deafened } : prev))
+  }, [])
+
+  // Hotkeys: 1-6 emotes, M micrófono, A audífonos.
   useEffect(() => {
     const onKeyDown = (event) => {
       const index = Number(event.key) - 1
       if (index >= 0 && index < EMOTES.length) {
         sendEmote(EMOTES[index].id)
       }
+      const key = event.key.toLowerCase()
+      if (key === 'm') toggleMic()
+      if (key === 'a') toggleDeafen()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [sendEmote])
+  }, [sendEmote, toggleMic, toggleDeafen])
 
   const iAmPlayer1 = !ui.player1UserId || ui.player1UserId === user.userId
   const rivalName =
@@ -235,6 +319,11 @@ export default function Game() {
     ui.status === 'PAUSED' && ui.graceDeadlineEpochMs && nowMs
       ? Math.max(0, Math.ceil((ui.graceDeadlineEpochMs - nowMs) / 1000))
       : null
+  // Sin micrófono (permiso negado) el botón M no tiene qué habilitar.
+  const micAvailable =
+    voiceUi.status !== 'no-mic' && voiceUi.status !== 'listen-only'
+  const micLive = micAvailable && voiceUi.micOn && !settings.micIn.muted
+  const showVoice = voiceUi.status && ui.status !== 'FINISHED'
 
   return (
     <div className="game-page">
@@ -338,6 +427,36 @@ export default function Game() {
             <span className="emote-key">{index + 1}</span>
           </button>
         ))}
+        {showVoice && (
+          <>
+            <button
+              type="button"
+              className={`voice-button ${micLive ? 'on' : 'off'}`}
+              title={
+                micAvailable
+                  ? `Micrófono ${micLive ? 'encendido' : 'apagado'} (M)`
+                  : 'Sin permiso de micrófono'
+              }
+              onClick={toggleMic}
+              disabled={!micAvailable}
+            >
+              <span className="emote-icon">{micLive ? '🎙️' : '🚫'}</span>
+              <span className="emote-key">M</span>
+            </button>
+            <button
+              type="button"
+              className={`voice-button ${voiceUi.deafened ? 'off' : 'on'}`}
+              title={`Audífonos: ${voiceUi.deafened ? 'no escuchas al rival' : 'escuchas al rival'} (A)`}
+              onClick={toggleDeafen}
+            >
+              <span className="emote-icon">{voiceUi.deafened ? '🔇' : '🎧'}</span>
+              <span className="emote-key">A</span>
+            </button>
+            <span className="voice-status">
+              Voz: {VOICE_LABELS[voiceUi.status] ?? voiceUi.status}
+            </span>
+          </>
+        )}
         {canSurrender && (
           <button
             type="button"
@@ -354,6 +473,8 @@ export default function Game() {
         {iAmPlayer1 ? ' (lado izquierdo, cian)' : ' (lado derecho, cian)'}. Gana el primero en llegar a 7.
         Toca los poderes que aparecen en el tablero para activarlos: 🧱 obstáculo,
         ⚡ zona rápida, 🐌 zona lenta, 👻 disco fantasma, 🛡️ escudo y 💥 caos.
+        {showVoice &&
+          ' Chat de voz: M enciende tu micrófono y A silencia al rival.'}
       </p>
     </div>
   )

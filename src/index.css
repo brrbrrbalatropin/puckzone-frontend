@@ -636,6 +636,37 @@ input:focus {
   color: #9ca3af;
 }
 
+/* Chat de voz: mismos botones que los emotes, con el estado en el borde. */
+.voice-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.7rem;
+  border-color: #374151;
+}
+
+.voice-button.on {
+  border-color: var(--accent);
+}
+
+.voice-button.off .emote-icon {
+  opacity: 0.45;
+}
+
+.voice-button:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--accent);
+  color: inherit;
+}
+
+.voice-status {
+  align-self: center;
+  max-width: 9rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
 .emote-bubble {
   position: absolute;
   top: 8%;
