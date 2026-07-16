@@ -71,6 +71,8 @@ src/
 | Variable | Default (fallback) | Purpose |
 |---|---|---|
 | `VITE_API_URL` | `http://localhost:8080` | Gateway base URL. **Baked in at build time** (Vite only reads `VITE_*` at build), not read at runtime — this is why it's set as a GitHub Actions repo variable and passed as a Docker build arg, not a container env var |
+| `VITE_TURN_URL` | *(empty — STUN only)* | Comma-separated TURN URLs for the in-game voice chat (e.g. Metered Open Relay). Without it, peers behind symmetric NAT/CGNAT can't connect voice. Baked at build time like `VITE_API_URL` |
+| `VITE_TURN_USERNAME` / `VITE_TURN_CREDENTIAL` | *(empty)* | Static credentials for the TURN server above |
 
 Session data (`puckzone_token`, `puckzone_refresh_token`, `puckzone_user`) lives in
 `localStorage`.

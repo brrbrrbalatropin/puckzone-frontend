@@ -10,10 +10,25 @@
  * el iniciador renegocia desde cero con una RTCPeerConnection nueva.
  * Si el usuario niega el micrófono se sigue en solo-escucha (recvonly).
  *
- * Solo STUN (sin TURN): en NATs muy restrictivos la conexión puede no
- * cuajar; se reporta 'failed' y la partida sigue sin voz.
+ * STUN descubre la IP pública de cada lado; cuando el P2P directo no cuaja
+ * (NAT simétrico/CGNAT, común en ISPs residenciales colombianos) hace falta
+ * un TURN que releve el audio. Se configura con las variables de build
+ * VITE_TURN_URL (lista separada por comas), VITE_TURN_USERNAME y
+ * VITE_TURN_CREDENTIAL; sin ellas, esas parejas de redes ven 'failed'.
  */
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
+function buildIceServers() {
+  const servers = [{ urls: 'stun:stun.l.google.com:19302' }]
+  const turnUrls = import.meta.env.VITE_TURN_URL
+  if (turnUrls) {
+    servers.push({
+      urls: turnUrls.split(',').map((u) => u.trim()).filter(Boolean),
+      username: import.meta.env.VITE_TURN_USERNAME,
+      credential: import.meta.env.VITE_TURN_CREDENTIAL,
+    })
+  }
+  return servers
+}
+const ICE_SERVERS = buildIceServers()
 // Anti-rebote: el eco de READY del rival y su READY propio llegan casi
 // juntos y no deben producir dos ofertas seguidas.
 const REOFFER_MIN_MS = 1500
@@ -27,6 +42,7 @@ export function createVoiceChat({ isInitiator, sendSignal, onStatusChange }) {
   let closed = false
   let pendingIce = []
   let lastOfferAt = 0
+  let failedRetries = 0
 
   // El audio remoto no necesita estar en el DOM para sonar.
   const audio = new Audio()
@@ -97,14 +113,45 @@ export function createVoiceChat({ isInitiator, sendSignal, onStatusChange }) {
     pc.onconnectionstatechange = () => {
       if (!pc) return
       if (pc.connectionState === 'connected') {
+        failedRetries = 0
         setStatus(localStream ? 'connected' : 'listen-only')
+        logSelectedRoute()
       } else if (pc.connectionState === 'failed') {
         setStatus('failed')
+        retryNegotiation()
       } else if (pc.connectionState === 'disconnected') {
         setStatus('connecting')
       }
     }
     return pc
+  }
+
+  /** Diagnóstico en consola: 'relay' = pasó por el TURN, 'srflx' = P2P vía STUN. */
+  function logSelectedRoute() {
+    pc?.getStats().then((stats) => {
+      stats.forEach((s) => {
+        if (s.type === 'candidate-pair' && s.state === 'succeeded' && s.nominated) {
+          const local = stats.get(s.localCandidateId)
+          console.debug('[voz] conectada vía', local?.candidateType ?? '?')
+        }
+      })
+    })
+  }
+
+  /**
+   * ICE falló (redes sin camino directo o TURN con hipo): se renegocia
+   * desde cero un par de veces antes de dar la voz por perdida. El
+   * iniciador re-oferta; el otro lado re-anuncia READY para provocarlo.
+   */
+  function retryNegotiation() {
+    if (closed || failedRetries >= 2) return
+    failedRetries += 1
+    if (isInitiator) {
+      lastOfferAt = 0
+      maybeOffer()
+    } else {
+      sendSignal('READY', null)
+    }
   }
 
   async function maybeOffer() {

@@ -11,6 +11,13 @@ COPY . .
 # horneada en el bundle. Si llega vacía, api.js cae a http://localhost:8080.
 ARG VITE_API_URL
 ENV VITE_API_URL=${VITE_API_URL}
+# TURN de respaldo del chat de voz (vacías = solo STUN; ver voiceChat.js).
+ARG VITE_TURN_URL
+ARG VITE_TURN_USERNAME
+ARG VITE_TURN_CREDENTIAL
+ENV VITE_TURN_URL=${VITE_TURN_URL} \
+    VITE_TURN_USERNAME=${VITE_TURN_USERNAME} \
+    VITE_TURN_CREDENTIAL=${VITE_TURN_CREDENTIAL}
 RUN npm run build
 
 # Etapa 2: servir los estáticos con nginx

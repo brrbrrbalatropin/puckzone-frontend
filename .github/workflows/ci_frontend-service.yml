@@ -83,6 +83,9 @@ jobs:
           # esté vacía, el código cae al fallback http://localhost:8080.
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_TURN_URL=${{ vars.VITE_TURN_URL }}
+            VITE_TURN_USERNAME=${{ vars.VITE_TURN_USERNAME }}
+            VITE_TURN_CREDENTIAL=${{ vars.VITE_TURN_CREDENTIAL }}
 
   deploy:
     name: Deploy to Azure

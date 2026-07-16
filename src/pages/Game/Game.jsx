@@ -77,6 +77,9 @@ export default function Game() {
   const currRef = useRef(null) // {s, t}: último estado y cuándo llegó
   const connectionRef = useRef(null)
   const lastSentRef = useRef(0)
+  // Posición virtual de la paleta con el mouse bloqueado (Pointer Lock):
+  // el cursor desaparece y la paleta se mueve por deltas acumulados aquí.
+  const lockPosRef = useRef(null)
 
   // Solo lo que afecta el HUD/overlays; las posiciones a 60Hz nunca pasan
   // por React (viven en los refs y las consume el bucle de canvas).
@@ -96,6 +99,10 @@ export default function Game() {
   // Confirmación de rendición ("¿estás seguro?"); el servidor solo recibe
   // el surrender ya confirmado.
   const [confirmSurrender, setConfirmSurrender] = useState(false)
+  // Mouse bloqueado dentro del tablero (Pointer Lock del navegador);
+  // lo reporta el evento pointerlockchange, no el clic del botón (el
+  // navegador puede negar el lock o soltarlo solo con Esc).
+  const [mouseLocked, setMouseLocked] = useState(false)
   // Reloj para la cuenta regresiva de la pausa; solo avanza (por timer)
   // mientras la partida está pausada.
   const [nowMs, setNowMs] = useState(0)
@@ -223,9 +230,29 @@ export default function Game() {
       const rect = canvas.getBoundingClientRect()
       if (rect.width === 0) return
 
-      // De píxeles de pantalla (canvas escalado por CSS) a coordenadas del tablero.
-      const x = ((event.clientX - rect.left) / rect.width) * BOARD_W
-      const y = ((event.clientY - rect.top) / rect.height) * BOARD_H
+      let x
+      let y
+      if (document.pointerLockElement === canvas) {
+        // Mouse bloqueado: sin cursor no hay posición absoluta; se acumulan
+        // los deltas SIEMPRE (aun en ticks descartados por el throttle: si
+        // no, el movimiento se perdería y la paleta se sentiría lenta) y se
+        // confina la posición virtual a la mitad propia — dejarla derivar
+        // hacia la mitad rival crearía una "zona muerta" invisible.
+        const state = currRef.current?.s
+        const pos = lockPosRef.current ?? { x: BOARD_W / 2, y: BOARD_H / 2 }
+        const iAmP1 = !state?.player1?.userId || state.player1.userId === user.userId
+        x = pos.x + (event.movementX / rect.width) * BOARD_W
+        y = pos.y + (event.movementY / rect.height) * BOARD_H
+        x = iAmP1
+          ? Math.min(Math.max(x, 0), BOARD_W / 2)
+          : Math.min(Math.max(x, BOARD_W / 2), BOARD_W)
+        y = Math.min(Math.max(y, 0), BOARD_H)
+        lockPosRef.current = { x, y }
+      } else {
+        // De píxeles de pantalla (canvas escalado por CSS) a coordenadas del tablero.
+        x = ((event.clientX - rect.left) / rect.width) * BOARD_W
+        y = ((event.clientY - rect.top) / rect.height) * BOARD_H
+      }
 
       const now = performance.now()
       if (now - lastSentRef.current < PADDLE_SEND_MS) return
@@ -249,6 +276,39 @@ export default function Game() {
     }
     frameId = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(frameId)
+  }, [user.userId])
+
+  // El botón solo PIDE el lock; la verdad la dicta pointerlockchange
+  // (el navegador lo suelta solo con Esc o al cambiar de pestaña).
+  useEffect(() => {
+    const onLockChange = () =>
+      setMouseLocked(document.pointerLockElement === canvasRef.current)
+    document.addEventListener('pointerlockchange', onLockChange)
+    return () => {
+      document.removeEventListener('pointerlockchange', onLockChange)
+      if (document.pointerLockElement) document.exitPointerLock()
+    }
+  }, [])
+
+  const toggleMouseLock = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    if (document.pointerLockElement === canvas) {
+      document.exitPointerLock()
+      return
+    }
+    // La posición virtual arranca donde está la paleta propia: el primer
+    // movimiento continúa desde ahí en vez de saltar al centro.
+    const state = currRef.current?.s
+    if (state) {
+      const iAmP1 = !state.player1?.userId || state.player1.userId === user.userId
+      lockPosRef.current = iAmP1
+        ? { x: state.paddle1X, y: state.paddle1Y }
+        : { x: state.paddle2X, y: state.paddle2Y }
+    }
+    // Puede fallar (p.ej. justo tras salir con Esc el navegador lo veta un
+    // instante); el estado del botón igual lo dicta pointerlockchange.
+    canvas.requestPointerLock()?.catch?.(() => {})
   }, [user.userId])
 
   // Solo toca refs: identidad estable, sirve para botones y hotkeys.
@@ -280,7 +340,7 @@ export default function Game() {
     setVoiceUi((prev) => (prev.status ? { ...prev, deafened: !prev.deafened } : prev))
   }, [])
 
-  // Hotkeys: 1-6 emotes, M micrófono, A audífonos.
+  // Hotkeys: 1-6 emotes, M micrófono, A audífonos, L bloquear mouse.
   useEffect(() => {
     const onKeyDown = (event) => {
       const index = Number(event.key) - 1
@@ -290,10 +350,11 @@ export default function Game() {
       const key = event.key.toLowerCase()
       if (key === 'm') toggleMic()
       if (key === 'a') toggleDeafen()
+      if (key === 'l') toggleMouseLock()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [sendEmote, toggleMic, toggleDeafen])
+  }, [sendEmote, toggleMic, toggleDeafen, toggleMouseLock])
 
   const iAmPlayer1 = !ui.player1UserId || ui.player1UserId === user.userId
   const rivalName =
@@ -457,6 +518,19 @@ export default function Game() {
             </span>
           </>
         )}
+        <button
+          type="button"
+          className={`voice-button ${mouseLocked ? 'on' : 'off'}`}
+          title={
+            mouseLocked
+              ? 'Mouse bloqueado en el tablero: Esc o L para soltarlo'
+              : 'Bloquear el mouse dentro del tablero (L)'
+          }
+          onClick={toggleMouseLock}
+        >
+          <span className="emote-icon">{mouseLocked ? '🔒' : '🔓'}</span>
+          <span className="emote-key">L</span>
+        </button>
         {canSurrender && (
           <button
             type="button"
@@ -471,6 +545,7 @@ export default function Game() {
       <p className="game-hint">
         Mueve el mouse (o el dedo) para controlar tu paleta
         {iAmPlayer1 ? ' (lado izquierdo, cian)' : ' (lado derecho, cian)'}. Gana el primero en llegar a 7.
+        Con 🔒 (tecla L) el mouse queda bloqueado dentro del tablero; Esc lo suelta.
         Toca los poderes que aparecen en el tablero para activarlos: 🧱 obstáculo,
         ⚡ zona rápida, 🐌 zona lenta, 👻 disco fantasma, 🛡️ escudo y 💥 caos.
         {showVoice &&
