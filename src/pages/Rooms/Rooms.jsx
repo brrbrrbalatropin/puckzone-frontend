@@ -43,7 +43,7 @@ export default function Rooms() {
 
       if (status.status === 'MATCHED') {
         stoppedRef.current = true
-        navigate(`/game/${status.match.matchId}`, { replace: true })
+        navigate(`/game/${status.match.matchId}?shard=${status.match.shard ?? 0}`, { replace: true })
       } else if (status.status === 'WAITING') {
         setRoom({ code: status.code })
       } else {
@@ -101,7 +101,7 @@ export default function Rooms() {
     setJoining(true)
     try {
       const status = await joinPrivateRoom(code)
-      navigate(`/game/${status.match.matchId}`)
+      navigate(`/game/${status.match.matchId}?shard=${status.match.shard ?? 0}`)
     } catch (err) {
       if (err.response?.status === 404) {
         setError('Código inválido, vencido o ya usado.')

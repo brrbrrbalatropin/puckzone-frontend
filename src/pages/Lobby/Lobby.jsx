@@ -87,7 +87,7 @@ export default function Lobby() {
         if (err.response?.status !== 409) throw err
       }
       const status = await playBot()
-      navigate(`/game/${status.match.matchId}`)
+      navigate(`/game/${status.match.matchId}?shard=${status.match.shard ?? 0}`)
     } catch {
       // Carrera rara (p. ej. emparejado y la sala aún no está lista):
       // la sala de espera la resuelve con su polling.
@@ -151,7 +151,7 @@ export default function Lobby() {
               <div className="reconnect-actions">
                 <button
                   type="button"
-                  onClick={() => navigate(`/game/${activeGame.gameId}`)}
+                  onClick={() => navigate(`/game/${activeGame.gameId}?shard=${activeGame.shard ?? 0}`)}
                 >
                   Volver a la partida
                 </button>

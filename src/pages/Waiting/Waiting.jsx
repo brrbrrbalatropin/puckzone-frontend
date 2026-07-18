@@ -33,7 +33,8 @@ export default function Waiting() {
     clearInterval(intervalRef.current)
     setMatch(foundMatch)
     setTimeout(() => {
-      navigate(`/game/${foundMatch.matchId}`, { replace: true })
+      // shard: a qué shard de game conectarse (0 si el backend aún no lo manda)
+      navigate(`/game/${foundMatch.matchId}?shard=${foundMatch.shard ?? 0}`, { replace: true })
     }, MATCHED_PAUSE_MS)
   }
 

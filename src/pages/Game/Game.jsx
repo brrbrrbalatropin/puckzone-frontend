@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePing } from '../../hooks/usePing'
 import { useSettings } from '../../hooks/useSettings'
@@ -68,6 +68,10 @@ const SNAP_DIST = 200
  */
 export default function Game() {
   const { matchId } = useParams()
+  // Shard de game dueño de la sala (?shard=N, default 0): en la URL para
+  // que un refresh a mitad de partida reconecte al shard correcto.
+  const [searchParams] = useSearchParams()
+  const shard = Number(searchParams.get('shard')) || 0
   const { user, token } = useAuth()
   const { settings, effectiveVolume } = useSettings()
   const ping = usePing()
@@ -121,6 +125,7 @@ export default function Game() {
   useEffect(() => {
     const connection = createGameConnection({
       gameId: matchId,
+      shard,
       userId: user.userId,
       token,
       onEmote: ({ userId: senderId, emote }) => {
@@ -177,7 +182,7 @@ export default function Game() {
       connectionRef.current = null
       connection.disconnect()
     }
-  }, [matchId, user.userId, token])
+  }, [matchId, shard, user.userId, token])
 
   // La voz arranca cuando el estado revela un rival HUMANO y quién es el
   // jugador 1 (iniciador de la negociación WebRTC). Contra el bot no hay.
