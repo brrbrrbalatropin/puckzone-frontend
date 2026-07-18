@@ -107,3 +107,24 @@ jobs:
             --name puckzone-frontend \
             --resource-group puckzone-rg \
             --image ${{ env.IMAGE_NAME }}:${GITHUB_SHA::7}
+
+  # Analisis estatico en SonarCloud con el scanner generico (aqui no hay
+  # Maven): la configuracion vive en sonar-project.properties de la raiz.
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Historia completa del repo: Sonar atribuye codigo nuevo vs viejo.
+          fetch-depth: 0
+
+      - name: Analyze with SonarCloud
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
