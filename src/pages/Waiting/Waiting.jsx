@@ -29,12 +29,16 @@ export default function Waiting() {
   const notInQueueRef = useRef(0)
 
   const goToMatch = (foundMatch) => {
+    // El matchId es un UUID que genera el backend: se valida el formato antes
+    // de meterlo en la ruta para no pasarle datos crudos de la red al router.
+    if (!/^[\w-]+$/.test(foundMatch.matchId)) return
     stoppedRef.current = true
     clearInterval(intervalRef.current)
     setMatch(foundMatch)
     setTimeout(() => {
       // shard: a qué shard de game conectarse (0 si el backend aún no lo manda)
-      navigate(`/game/${foundMatch.matchId}?shard=${foundMatch.shard ?? 0}`, { replace: true })
+      const shard = Number.isInteger(foundMatch.shard) ? foundMatch.shard : 0
+      navigate(`/game/${encodeURIComponent(foundMatch.matchId)}?shard=${shard}`, { replace: true })
     }, MATCHED_PAUSE_MS)
   }
 
