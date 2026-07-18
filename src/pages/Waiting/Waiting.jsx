@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getQueueStatus, leaveQueue, playBot } from '../../services/matchmakingService'
+import { playSfx } from '../../services/soundService'
 
 const POLL_INTERVAL_MS = 1500
 const MATCHED_PAUSE_MS = 1500
@@ -82,6 +83,7 @@ export default function Waiting() {
   }, [navigate])
 
   const handlePlayBot = async () => {
+    playSfx('seleccionar')
     try {
       const status = await playBot()
       goToMatch(status.match)

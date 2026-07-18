@@ -8,7 +8,7 @@ export const SettingsContext = createContext(null)
 // que SettingsContext.jsx solo exporte el provider y Fast Refresh funcione.
 export const AUDIO_CHANNELS = [
   { id: 'music', label: 'Música', hint: 'Banda sonora del juego (próximamente)' },
-  { id: 'sfx', label: 'Efectos de sonido', hint: 'Golpes, goles y poderes (próximamente)' },
+  { id: 'sfx', label: 'Efectos de sonido', hint: 'Goles, poderes y botones' },
   { id: 'micIn', label: 'Micrófono', hint: 'Tu voz en el chat de voz (próximamente)' },
   { id: 'voiceOut', label: 'Voz de los demás', hint: 'Volumen al que escuchas a tu rival (próximamente)' },
 ]

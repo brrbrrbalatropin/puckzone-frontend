@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { getActiveGame } from '../../services/gameService'
 import { joinQueue, playBot } from '../../services/matchmakingService'
 import { getPlayer } from '../../services/rankingService'
+import { playSfx } from '../../services/soundService'
 
 /**
  * Pantalla principal tras el login, a tres columnas: vistazo del
@@ -58,6 +59,7 @@ export default function Lobby() {
   }, [user.userId])
 
   const handlePlay = async () => {
+    playSfx('seleccionar')
     setError('')
     setSearching(true)
     try {
@@ -78,6 +80,7 @@ export default function Lobby() {
   // estaba, da igual) y acepta el bot de inmediato. Si justo en ese instante
   // lo emparejó un humano, matchmaking devuelve esa sala y también sirve.
   const handlePlayBotNow = async () => {
+    playSfx('seleccionar')
     setError('')
     setSearching(true)
     try {

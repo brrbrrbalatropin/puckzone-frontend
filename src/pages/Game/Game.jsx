@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePing } from '../../hooks/usePing'
 import { useSettings } from '../../hooks/useSettings'
 import { createGameConnection } from '../../services/gameSocket'
+import { playSfx } from '../../services/soundService'
 import { createVoiceChat } from '../../services/voiceChat'
 
 // Dimensiones lógicas del motor de física (puckzone-game). El canvas usa
@@ -142,6 +143,7 @@ export default function Game() {
         }, EMOTE_BUBBLE_MS)
       },
       onState: (state) => {
+        playStateSfx(currRef.current?.s, state)
         prevRef.current = currRef.current
         currRef.current = { s: state, t: performance.now() }
         setUi((prev) =>
@@ -680,6 +682,28 @@ function drawGoalBanner(ctx, state) {
   ctx.textBaseline = 'middle'
   ctx.fillStyle = '#ffd54a'
   ctx.fillText(text, BOARD_W / 2, BOARD_H / 2)
+}
+
+/**
+ * Sonidos de partida por transición de estado (nuevo vs anterior): gol si
+ * sube el marcador (también el gol de la victoria, que llega ya FINISHED),
+ * aparición del pickup y recogida de poder (un efecto que no estaba). Sin
+ * estado anterior no suena nada: reconectar a mitad de partida es silencio,
+ * no una ráfaga de eventos viejos.
+ */
+function playStateSfx(prev, state) {
+  if (!prev) return
+  if (state.score1 > prev.score1 || state.score2 > prev.score2) {
+    playSfx('puntoAnotado')
+  }
+  if (state.pickup && !prev.pickup) playSfx('poderAparece')
+  const prevTypes = new Set((prev.effects ?? []).map((e) => e.type))
+  for (const effect of state.effects ?? []) {
+    if (prevTypes.has(effect.type)) continue
+    // Solo caos y zonas tienen sonido asignado por ahora (SONIDOS.md).
+    if (effect.type === 'CHAOS') playSfx('poderCaos')
+    else if (effect.type === 'FAST_ZONE' || effect.type === 'SLOW_ZONE') playSfx('poderZona')
+  }
 }
 
 /** Zonas translúcidas y obstáculos sólidos, anclados donde estaba el pickup. */

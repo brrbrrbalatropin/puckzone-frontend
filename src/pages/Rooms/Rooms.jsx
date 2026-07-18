@@ -7,6 +7,7 @@ import {
   getPrivateRoomStatus,
   joinPrivateRoom,
 } from '../../services/matchmakingService'
+import { playSfx } from '../../services/soundService'
 
 const POLL_INTERVAL_MS = 2000
 
@@ -60,6 +61,7 @@ export default function Rooms() {
   }, [navigate])
 
   const handleCreate = async () => {
+    playSfx('seleccionar')
     setError('')
     setCreating(true)
     setCopied(false)
@@ -97,6 +99,7 @@ export default function Rooms() {
     e.preventDefault()
     const code = joinCode.trim().toUpperCase()
     if (!code) return
+    playSfx('seleccionar')
     setError('')
     setJoining(true)
     try {

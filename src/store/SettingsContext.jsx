@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { setSfxVolume } from '../services/soundService'
 import { SettingsContext } from './settings-context'
 
 /**
@@ -35,6 +36,13 @@ function loadStoredSettings() {
 
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(loadStoredSettings)
+
+  // El reproductor de SFX (soundService) vive fuera de React: se le empuja
+  // el volumen efectivo en cada cambio para que mute/volumen apliquen al
+  // instante sin que cada playSfx tenga que consultar el contexto.
+  useEffect(() => {
+    setSfxVolume(settings.sfx.muted ? 0 : settings.sfx.volume / 100)
+  }, [settings.sfx.muted, settings.sfx.volume])
 
   const updateChannel = (channelId, patch) => {
     setSettings((prev) => {
