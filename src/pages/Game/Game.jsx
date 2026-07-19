@@ -96,6 +96,7 @@ export default function Game() {
     player1Username: null,
     player2Username: null,
     opponentType: null,
+    botLevel: 0,
     winnerId: null,
     finishReason: null,
     graceDeadlineEpochMs: 0,
@@ -160,6 +161,7 @@ export default function Game() {
                 player1Username: state.player1?.username ?? null,
                 player2Username: state.player2?.username ?? null,
                 opponentType: state.opponentType,
+                botLevel: state.botLevel ?? 0,
                 winnerId: state.winnerId ?? null,
                 finishReason: state.finishReason ?? null,
                 graceDeadlineEpochMs: state.graceDeadlineEpochMs ?? 0,
@@ -366,7 +368,7 @@ export default function Game() {
   const iAmPlayer1 = !ui.player1UserId || ui.player1UserId === user.userId
   const rivalName =
     ui.opponentType === 'BOT'
-      ? 'BOT'
+      ? (ui.botLevel > 0 ? `Bot nivel ${ui.botLevel}` : 'BOT')
       : ((iAmPlayer1 ? ui.player2Username : ui.player1Username) ?? 'Rival')
   const myScore = iAmPlayer1 ? ui.score1 : ui.score2
   const rivalScore = iAmPlayer1 ? ui.score2 : ui.score1
