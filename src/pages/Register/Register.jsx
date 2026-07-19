@@ -77,7 +77,7 @@ export default function Register() {
 
         <form onSubmit={handleSubmit}>
           <label>
-            Nombre de usuario
+            <span>Nombre de usuario</span>
             <input
               type="text"
               name="username"
@@ -91,7 +91,7 @@ export default function Register() {
           </label>
 
           <label>
-            Correo institucional (.edu.co)
+            <span>Correo institucional (.edu.co)</span>
             <input
               type="email"
               name="email"
@@ -110,7 +110,7 @@ export default function Register() {
           )}
 
           <label>
-            Contraseña (mínimo 8 caracteres)
+            <span>Contraseña (mínimo 8 caracteres)</span>
             <input
               type="password"
               name="password"

@@ -40,7 +40,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <label>
-            Correo institucional
+            <span>Correo institucional</span>
             <input
               type="email"
               name="email"
@@ -53,7 +53,7 @@ export default function Login() {
           </label>
 
           <label>
-            Contraseña
+            <span>Contraseña</span>
             <input
               type="password"
               name="password"

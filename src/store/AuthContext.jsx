@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { decodeJwt } from '../services/jwt'
 
@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
   // authResponse = { token, refreshToken, username, university } de register o login.
   // El refresh token solo lo consume el interceptor de api.js cuando el
   // access (1h) vence; por eso no hace falta tenerlo en el estado de React.
-  const login = (authResponse) => {
+  const login = useCallback((authResponse) => {
     const claims = decodeJwt(authResponse.token) || {}
     const user = {
       userId: claims.sub,
@@ -37,22 +37,27 @@ export function AuthProvider({ children }) {
     localStorage.setItem('puckzone_refresh_token', authResponse.refreshToken)
     localStorage.setItem('puckzone_user', JSON.stringify(user))
     setSession({ token: authResponse.token, user })
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('puckzone_token')
     localStorage.removeItem('puckzone_refresh_token')
     localStorage.removeItem('puckzone_user')
     setSession({ token: null, user: null })
-  }
+  }, [])
 
-  const value = {
-    token: session.token,
-    user: session.user,
-    isAuthenticated: Boolean(session.token),
-    login,
-    logout,
-  }
+  // Memoizado: un objeto nuevo en cada render re-renderizaría a TODOS los
+  // consumidores del contexto aunque la sesión no haya cambiado.
+  const value = useMemo(
+    () => ({
+      token: session.token,
+      user: session.user,
+      isAuthenticated: Boolean(session.token),
+      login,
+      logout,
+    }),
+    [session, login, logout],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

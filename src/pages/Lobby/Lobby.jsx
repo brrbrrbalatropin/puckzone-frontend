@@ -110,9 +110,8 @@ export default function Lobby() {
             <h2>{user.username}</h2>
             <p className="player-university">{user.university}</p>
 
-            {statsLoading ? (
-              <p>Cargando estadísticas…</p>
-            ) : stats ? (
+            {statsLoading && <p>Cargando estadísticas…</p>}
+            {!statsLoading && stats && (
               <div className="player-stats">
                 <div>
                   <span className="stat-value">{stats.elo}</span>
@@ -131,7 +130,8 @@ export default function Lobby() {
                   <span className="stat-label">Derrotas</span>
                 </div>
               </div>
-            ) : (
+            )}
+            {!statsLoading && !stats && (
               <p className="player-no-stats">
                 Aún no tienes partidas. ELO inicial: <strong>1200</strong>
               </p>

@@ -6,7 +6,7 @@
 export function decodeJwt(token) {
   try {
     const payload = token.split('.')[1]
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const base64 = payload.replaceAll('-', '+').replaceAll('_', '/')
     return JSON.parse(atob(base64))
   } catch {
     return null

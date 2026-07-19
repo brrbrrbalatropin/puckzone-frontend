@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-// Todo el trafico del frontend pasa por el gateway; nunca se llama
+// El trafico completo del frontend pasa por el gateway; nunca se llama
 // directamente a un microservicio.
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
@@ -62,11 +62,11 @@ api.interceptors.response.use(
     const status = error.response?.status
     const url = error.config?.url || ''
     if (status !== 401 || url.startsWith('/api/auth/')) {
-      return Promise.reject(error)
+      throw error
     }
     if (error.config._retry) {
       endSession()
-      return Promise.reject(error)
+      throw error
     }
     error.config._retry = true
     try {
@@ -74,7 +74,7 @@ api.interceptors.response.use(
       return api.request(error.config)
     } catch {
       endSession()
-      return Promise.reject(error)
+      throw error
     }
   },
 )

@@ -32,11 +32,11 @@ export default function LobbyLeaderboard() {
     <section className="lobby-leaderboard">
       <h3>Leaderboard</h3>
 
-      {players === null ? (
-        <p className="leaderboard-empty">Cargando…</p>
-      ) : players.length === 0 ? (
+      {players === null && <p className="leaderboard-empty">Cargando…</p>}
+      {players?.length === 0 && (
         <p className="leaderboard-empty">Aún no hay partidas rankeadas.</p>
-      ) : (
+      )}
+      {players?.length > 0 && (
         <ol className="leaderboard-list">
           {players.map((p) => (
             <li key={p.id} className={p.id === user.userId ? 'me' : ''}>

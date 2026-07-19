@@ -175,40 +175,54 @@ export function createVoiceChat({ isInitiator, sendSignal, onStatusChange }) {
     }
   }
 
+  async function onReadySignal() {
+    opponentReady = true
+    // El eco le confirma al iniciador (quizá recién reconectado) que
+    // este lado sigue listo; el iniciador no eco-responde (sin bucle).
+    if (!isInitiator && mediaReady) sendSignal('READY', null)
+    await maybeOffer()
+  }
+
+  async function onOfferSignal(payload) {
+    if (isInitiator) return
+    setStatus('connecting')
+    const peer = newPeer()
+    await peer.setRemoteDescription(JSON.parse(payload))
+    await flushIce()
+    const answer = await peer.createAnswer()
+    if (closed || pc !== peer) return
+    await peer.setLocalDescription(answer)
+    sendSignal('ANSWER', JSON.stringify(answer))
+  }
+
+  async function onAnswerSignal(payload) {
+    if (!isInitiator || !pc) return
+    await pc.setRemoteDescription(JSON.parse(payload))
+    await flushIce()
+  }
+
+  async function onIceSignal(payload) {
+    const candidate = JSON.parse(payload)
+    if (pc?.remoteDescription) {
+      await pc.addIceCandidate(candidate).catch(() => {})
+    } else {
+      pendingIce.push(candidate)
+    }
+  }
+
+  function onLeaveSignal() {
+    teardownPeer()
+    setStatus('rival-off')
+  }
+
   async function handleSignal({ type, payload }) {
     if (closed) return
     try {
-      if (type === 'READY') {
-        opponentReady = true
-        // El eco le confirma al iniciador (quizá recién reconectado) que
-        // este lado sigue listo; el iniciador no eco-responde (sin bucle).
-        if (!isInitiator && mediaReady) sendSignal('READY', null)
-        await maybeOffer()
-      } else if (type === 'OFFER') {
-        if (isInitiator) return
-        setStatus('connecting')
-        const peer = newPeer()
-        await peer.setRemoteDescription(JSON.parse(payload))
-        await flushIce()
-        const answer = await peer.createAnswer()
-        if (closed || pc !== peer) return
-        await peer.setLocalDescription(answer)
-        sendSignal('ANSWER', JSON.stringify(answer))
-      } else if (type === 'ANSWER') {
-        if (!isInitiator || !pc) return
-        await pc.setRemoteDescription(JSON.parse(payload))
-        await flushIce()
-      } else if (type === 'ICE') {
-        const candidate = JSON.parse(payload)
-        if (pc && pc.remoteDescription) {
-          await pc.addIceCandidate(candidate).catch(() => {})
-        } else {
-          pendingIce.push(candidate)
-        }
-      } else if (type === 'LEAVE') {
-        teardownPeer()
-        setStatus('rival-off')
-      }
+      if (type === 'READY') await onReadySignal()
+      else if (type === 'OFFER') await onOfferSignal(payload)
+      else if (type === 'ANSWER') await onAnswerSignal(payload)
+      else if (type === 'ICE') await onIceSignal(payload)
+      else if (type === 'LEAVE') onLeaveSignal()
     } catch {
       // Una señal malformada o fuera de orden no debe tumbar la partida;
       // la renegociación por READY recupera la llamada.
@@ -224,7 +238,7 @@ export function createVoiceChat({ isInitiator, sendSignal, onStatusChange }) {
      */
     refresh() {
       if (closed || !mediaReady) return
-      if (pc && pc.connectionState === 'connected') return
+      if (pc?.connectionState === 'connected') return
       sendSignal('READY', null)
       maybeOffer()
     },

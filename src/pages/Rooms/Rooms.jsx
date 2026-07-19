@@ -143,7 +143,7 @@ export default function Rooms() {
                 </div>
                 <div className="room-wait">
                   <span className="waiting-spinner small" aria-hidden="true" />
-                  Esperando a tu amigo…
+                  <span>Esperando a tu amigo…</span>
                 </div>
                 <div className="rooms-actions">
                   <button type="button" onClick={handleCopy}>

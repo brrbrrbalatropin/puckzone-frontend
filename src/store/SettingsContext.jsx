@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { setSfxVolume } from '../services/soundService'
 import { SettingsContext } from './settings-context'
 
@@ -44,25 +44,30 @@ export function SettingsProvider({ children }) {
     setSfxVolume(settings.sfx.muted ? 0 : settings.sfx.volume / 100)
   }, [settings.sfx.muted, settings.sfx.volume])
 
-  const updateChannel = (channelId, patch) => {
+  const updateChannel = useCallback((channelId, patch) => {
     setSettings((prev) => {
       const next = { ...prev, [channelId]: { ...prev[channelId], ...patch } }
       localStorage.setItem('puckzone_settings', JSON.stringify(next))
       return next
     })
-  }
+  }, [])
 
-  const value = {
-    settings,
-    setVolume: (channelId, volume) => updateChannel(channelId, { volume }),
-    toggleMute: (channelId) =>
-      updateChannel(channelId, { muted: !settings[channelId].muted }),
-    /** Volumen efectivo 0-1 para los reproductores (0 si esta silenciado). */
-    effectiveVolume: (channelId) => {
-      const channel = settings[channelId]
-      return channel.muted ? 0 : channel.volume / 100
-    },
-  }
+  // Memoizado: un objeto nuevo en cada render re-renderizaría a TODOS los
+  // consumidores del contexto aunque los ajustes no hayan cambiado.
+  const value = useMemo(
+    () => ({
+      settings,
+      setVolume: (channelId, volume) => updateChannel(channelId, { volume }),
+      toggleMute: (channelId) =>
+        updateChannel(channelId, { muted: !settings[channelId].muted }),
+      /** Volumen efectivo 0-1 para los reproductores (0 si esta silenciado). */
+      effectiveVolume: (channelId) => {
+        const channel = settings[channelId]
+        return channel.muted ? 0 : channel.volume / 100
+      },
+    }),
+    [settings, updateChannel],
+  )
 
   return (
     <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>

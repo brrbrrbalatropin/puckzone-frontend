@@ -61,7 +61,7 @@ const SNAP_DIST = 200
 /**
  * La cancha. El estado llega a ~60Hz por /topic/game/{id} y vive en refs:
  * el canvas se repinta con requestAnimationFrame INTERPOLANDO entre los dos
- * últimos estados (fluidez ante jitter de red). TODO se pinta desde el
+ * últimos estados (fluidez ante jitter de red). Cada pieza se pinta desde el
  * servidor, incluida la paleta propia: se probó predecirla localmente y los
  * golpes se veían erráticos (el disco "del pasado" chocaba contra una paleta
  * "del presente" — dos líneas de tiempo en pantalla). Coherencia > respuesta.
@@ -124,25 +124,29 @@ export default function Game() {
   const pendingVoiceSignalsRef = useRef([])
   const [voiceUi, setVoiceUi] = useState({ status: null, micOn: false, deafened: false })
 
+  // Fuera del effect para no anidar funciones de más (la burbuja programa
+  // su propio borrado y el timeout no debe matar una burbuja más nueva).
+  const showEmoteBubble = useCallback(({ userId: senderId, emote }) => {
+    const icon = EMOTES.find((e) => e.id === emote)?.icon
+    const p1Id = currRef.current?.s?.player1?.userId
+    if (!icon || !p1Id) return
+    const side = senderId === p1Id ? 'left' : 'right'
+    const key = ++bubbleSeqRef.current
+    setBubbles((prev) => ({ ...prev, [side]: { icon, key } }))
+    setTimeout(() => {
+      setBubbles((prev) =>
+        prev[side]?.key === key ? { ...prev, [side]: null } : prev,
+      )
+    }, EMOTE_BUBBLE_MS)
+  }, [])
+
   useEffect(() => {
     const connection = createGameConnection({
       gameId: matchId,
       shard,
       userId: user.userId,
       token,
-      onEmote: ({ userId: senderId, emote }) => {
-        const icon = EMOTES.find((e) => e.id === emote)?.icon
-        const p1Id = currRef.current?.s?.player1?.userId
-        if (!icon || !p1Id) return
-        const side = senderId === p1Id ? 'left' : 'right'
-        const key = ++bubbleSeqRef.current
-        setBubbles((prev) => ({ ...prev, [side]: { icon, key } }))
-        setTimeout(() => {
-          setBubbles((prev) =>
-            prev[side]?.key === key ? { ...prev, [side]: null } : prev,
-          )
-        }, EMOTE_BUBBLE_MS)
-      },
+      onEmote: showEmoteBubble,
       onState: (state) => {
         playStateSfx(currRef.current?.s, state)
         prevRef.current = currRef.current
@@ -186,7 +190,7 @@ export default function Game() {
       connectionRef.current = null
       connection.disconnect()
     }
-  }, [matchId, shard, user.userId, token])
+  }, [matchId, shard, user.userId, token, showEmoteBubble])
 
   // La voz arranca cuando el estado revela un rival HUMANO y quién es el
   // jugador 1 (iniciador de la negociación WebRTC). Contra el bot no hay.
@@ -365,30 +369,11 @@ export default function Game() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [sendEmote, toggleMic, toggleDeafen, toggleMouseLock])
 
-  const iAmPlayer1 = !ui.player1UserId || ui.player1UserId === user.userId
-  const rivalName =
-    ui.opponentType === 'BOT'
-      ? (ui.botLevel > 0 ? `Bot nivel ${ui.botLevel}` : 'BOT')
-      : ((iAmPlayer1 ? ui.player2Username : ui.player1Username) ?? 'Rival')
-  const myScore = iAmPlayer1 ? ui.score1 : ui.score2
-  const rivalScore = iAmPlayer1 ? ui.score2 : ui.score1
-  const iWon = ui.winnerId ? ui.winnerId === user.userId : myScore > rivalScore
-  const finishDetail =
-    ui.finishReason === 'SURRENDER'
-      ? iWon
-        ? 'Tu rival se rindió.'
-        : 'Te rendiste.'
-      : ui.finishReason === 'DISCONNECT'
-        ? iWon
-          ? 'Tu rival abandonó la partida.'
-          : 'Perdiste por abandono.'
-        : null
+  const { iAmPlayer1, rivalName, myScore, rivalScore, iWon, finishDetail } =
+    deriveHud(ui, user.userId)
   const canSurrender =
     connected && (ui.status === 'PLAYING' || ui.status === 'PAUSED')
-  const graceLeft =
-    ui.status === 'PAUSED' && ui.graceDeadlineEpochMs && nowMs
-      ? Math.max(0, Math.ceil((ui.graceDeadlineEpochMs - nowMs) / 1000))
-      : null
+  const graceLeft = graceLeftSeconds(ui, nowMs)
   // Sin micrófono (permiso negado) el botón M no tiene qué habilitar.
   const micAvailable =
     voiceUi.status !== 'no-mic' && voiceUi.status !== 'listen-only'
@@ -406,10 +391,10 @@ export default function Game() {
           <strong>{rivalScore}</strong> {rivalName}
         </span>
         <span
-          className={`game-ping ${ping === null ? 'bad' : ping < 80 ? 'good' : ping < 150 ? 'mid' : 'bad'}`}
+          className={`game-ping ${pingClass(ping)}`}
           title="Latencia hacia el servidor"
         >
-          · {ping === null ? '— ' : ping}ms
+          · {ping ?? '— '}ms
         </span>
       </header>
 
@@ -421,67 +406,24 @@ export default function Game() {
           className="game-canvas"
         />
 
-        {(!connected || !ui.status || ui.status === 'WAITING') && (
-          <div className="game-overlay">
-            <p>{connected ? 'Esperando al rival…' : 'Conectando…'}</p>
-          </div>
-        )}
+        <GameOverlays
+          connected={connected}
+          ui={ui}
+          graceLeft={graceLeft}
+          iWon={iWon}
+          finishDetail={finishDetail}
+          myScore={myScore}
+          rivalScore={rivalScore}
+          rivalName={rivalName}
+          confirmSurrender={confirmSurrender}
+          onSurrender={() => {
+            connectionRef.current?.sendSurrender()
+            setConfirmSurrender(false)
+          }}
+          onKeepPlaying={() => setConfirmSurrender(false)}
+        />
 
-        {connected && ui.status === 'PAUSED' && (
-          <div className="game-overlay">
-            <h2>Rival desconectado</h2>
-            <p>
-              Si no vuelve{graceLeft !== null ? ` en ${graceLeft}s` : ' a tiempo'},
-              ganas por abandono.
-            </p>
-          </div>
-        )}
-
-        {ui.status === 'FINISHED' && (
-          <div className="game-overlay">
-            <h2>{iWon ? '¡Ganaste!' : 'Perdiste'}</h2>
-            {finishDetail && <p className="finish-detail">{finishDetail}</p>}
-            <p>
-              {myScore} — {rivalScore} contra {rivalName}
-            </p>
-            <Link to="/" className="game-back">
-              Volver al lobby
-            </Link>
-          </div>
-        )}
-
-        {confirmSurrender && ui.status !== 'FINISHED' && (
-          <div className="game-overlay">
-            <h2>¿Rendirse?</h2>
-            <p>Tu rival ganará la partida.</p>
-            <div className="confirm-actions">
-              <button
-                type="button"
-                className="surrender-button"
-                onClick={() => {
-                  connectionRef.current?.sendSurrender()
-                  setConfirmSurrender(false)
-                }}
-              >
-                Sí, rendirme
-              </button>
-              <button type="button" onClick={() => setConfirmSurrender(false)}>
-                Seguir jugando
-              </button>
-            </div>
-          </div>
-        )}
-
-        {bubbles.left && (
-          <span key={bubbles.left.key} className="emote-bubble left">
-            {bubbles.left.icon}
-          </span>
-        )}
-        {bubbles.right && (
-          <span key={bubbles.right.key} className="emote-bubble right">
-            {bubbles.right.icon}
-          </span>
-        )}
+        <EmoteBubbles bubbles={bubbles} />
       </div>
 
       <div className="emote-bar">
@@ -498,48 +440,16 @@ export default function Game() {
           </button>
         ))}
         {showVoice && (
-          <>
-            <button
-              type="button"
-              className={`voice-button ${micLive ? 'on' : 'off'}`}
-              title={
-                micAvailable
-                  ? `Micrófono ${micLive ? 'encendido' : 'apagado'} (M)`
-                  : 'Sin permiso de micrófono'
-              }
-              onClick={toggleMic}
-              disabled={!micAvailable}
-            >
-              <span className="emote-icon">{micLive ? '🎙️' : '🚫'}</span>
-              <span className="emote-key">M</span>
-            </button>
-            <button
-              type="button"
-              className={`voice-button ${voiceUi.deafened ? 'off' : 'on'}`}
-              title={`Audífonos: ${voiceUi.deafened ? 'no escuchas al rival' : 'escuchas al rival'} (A)`}
-              onClick={toggleDeafen}
-            >
-              <span className="emote-icon">{voiceUi.deafened ? '🔇' : '🎧'}</span>
-              <span className="emote-key">A</span>
-            </button>
-            <span className="voice-status">
-              Voz: {VOICE_LABELS[voiceUi.status] ?? voiceUi.status}
-            </span>
-          </>
+          <VoiceControls
+            micAvailable={micAvailable}
+            micLive={micLive}
+            deafened={voiceUi.deafened}
+            status={voiceUi.status}
+            onToggleMic={toggleMic}
+            onToggleDeafen={toggleDeafen}
+          />
         )}
-        <button
-          type="button"
-          className={`voice-button ${mouseLocked ? 'on' : 'off'}`}
-          title={
-            mouseLocked
-              ? 'Mouse bloqueado en el tablero: Esc o L para soltarlo'
-              : 'Bloquear el mouse dentro del tablero (L)'
-          }
-          onClick={toggleMouseLock}
-        >
-          <span className="emote-icon">{mouseLocked ? '🔒' : '🔓'}</span>
-          <span className="emote-key">L</span>
-        </button>
+        <MouseLockButton locked={mouseLocked} onToggle={toggleMouseLock} />
         {canSurrender && (
           <button
             type="button"
@@ -561,6 +471,195 @@ export default function Game() {
           ' Chat de voz: M enciende tu micrófono y A silencia al rival.'}
       </p>
     </div>
+  )
+}
+
+/**
+ * Valores del HUD derivados del estado de la partida, vistos desde el lado
+ * del jugador local (quién es el rival, marcador propio/ajeno, resultado).
+ */
+function deriveHud(ui, myUserId) {
+  const iAmPlayer1 = !ui.player1UserId || ui.player1UserId === myUserId
+  let rivalName
+  if (ui.opponentType === 'BOT') {
+    rivalName = ui.botLevel > 0 ? `Bot nivel ${ui.botLevel}` : 'BOT'
+  } else {
+    rivalName = (iAmPlayer1 ? ui.player2Username : ui.player1Username) ?? 'Rival'
+  }
+  const myScore = iAmPlayer1 ? ui.score1 : ui.score2
+  const rivalScore = iAmPlayer1 ? ui.score2 : ui.score1
+  const iWon = ui.winnerId ? ui.winnerId === myUserId : myScore > rivalScore
+  return {
+    iAmPlayer1,
+    rivalName,
+    myScore,
+    rivalScore,
+    iWon,
+    finishDetail: finishDetailOf(ui.finishReason, iWon),
+  }
+}
+
+/** Con forfeit el marcador no cuenta la historia: el motivo va aparte. */
+function finishDetailOf(finishReason, iWon) {
+  if (finishReason === 'SURRENDER') {
+    return iWon ? 'Tu rival se rindió.' : 'Te rendiste.'
+  }
+  if (finishReason === 'DISCONNECT') {
+    return iWon ? 'Tu rival abandonó la partida.' : 'Perdiste por abandono.'
+  }
+  return null
+}
+
+/** Segundos de gracia restantes durante la pausa; null fuera de ella. */
+function graceLeftSeconds(ui, nowMs) {
+  if (ui.status !== 'PAUSED' || !ui.graceDeadlineEpochMs || !nowMs) return null
+  return Math.max(0, Math.ceil((ui.graceDeadlineEpochMs - nowMs) / 1000))
+}
+
+function pingClass(ping) {
+  if (ping === null) return 'bad'
+  if (ping < 80) return 'good'
+  return ping < 150 ? 'mid' : 'bad'
+}
+
+/** Overlays sobre el tablero: conexión/espera, pausa, final y rendición. */
+function GameOverlays({
+  connected,
+  ui,
+  graceLeft,
+  iWon,
+  finishDetail,
+  myScore,
+  rivalScore,
+  rivalName,
+  confirmSurrender,
+  onSurrender,
+  onKeepPlaying,
+}) {
+  return (
+    <>
+      {(!connected || !ui.status || ui.status === 'WAITING') && (
+        <div className="game-overlay">
+          <p>{connected ? 'Esperando al rival…' : 'Conectando…'}</p>
+        </div>
+      )}
+
+      {connected && ui.status === 'PAUSED' && (
+        <div className="game-overlay">
+          <h2>Rival desconectado</h2>
+          <p>
+            Si no vuelve{graceLeft !== null ? ` en ${graceLeft}s` : ' a tiempo'},
+            ganas por abandono.
+          </p>
+        </div>
+      )}
+
+      {ui.status === 'FINISHED' && (
+        <div className="game-overlay">
+          <h2>{iWon ? '¡Ganaste!' : 'Perdiste'}</h2>
+          {finishDetail && <p className="finish-detail">{finishDetail}</p>}
+          <p>
+            {myScore} — {rivalScore} contra {rivalName}
+          </p>
+          <Link to="/" className="game-back">
+            Volver al lobby
+          </Link>
+        </div>
+      )}
+
+      {confirmSurrender && ui.status !== 'FINISHED' && (
+        <div className="game-overlay">
+          <h2>¿Rendirse?</h2>
+          <p>Tu rival ganará la partida.</p>
+          <div className="confirm-actions">
+            <button
+              type="button"
+              className="surrender-button"
+              onClick={onSurrender}
+            >
+              Sí, rendirme
+            </button>
+            <button type="button" onClick={onKeepPlaying}>
+              Seguir jugando
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+function EmoteBubbles({ bubbles }) {
+  return (
+    <>
+      {bubbles.left && (
+        <span key={bubbles.left.key} className="emote-bubble left">
+          {bubbles.left.icon}
+        </span>
+      )}
+      {bubbles.right && (
+        <span key={bubbles.right.key} className="emote-bubble right">
+          {bubbles.right.icon}
+        </span>
+      )}
+    </>
+  )
+}
+
+/** Botones M/A del chat de voz con su estado traducido. */
+function VoiceControls({
+  micAvailable,
+  micLive,
+  deafened,
+  status,
+  onToggleMic,
+  onToggleDeafen,
+}) {
+  let micTitle = 'Sin permiso de micrófono'
+  if (micAvailable) {
+    micTitle = micLive ? 'Micrófono encendido (M)' : 'Micrófono apagado (M)'
+  }
+  return (
+    <>
+      <button
+        type="button"
+        className={`voice-button ${micLive ? 'on' : 'off'}`}
+        title={micTitle}
+        onClick={onToggleMic}
+        disabled={!micAvailable}
+      >
+        <span className="emote-icon">{micLive ? '🎙️' : '🚫'}</span>
+        <span className="emote-key">M</span>
+      </button>
+      <button
+        type="button"
+        className={`voice-button ${deafened ? 'off' : 'on'}`}
+        title={`Audífonos: ${deafened ? 'no escuchas al rival' : 'escuchas al rival'} (A)`}
+        onClick={onToggleDeafen}
+      >
+        <span className="emote-icon">{deafened ? '🔇' : '🎧'}</span>
+        <span className="emote-key">A</span>
+      </button>
+      <span className="voice-status">Voz: {VOICE_LABELS[status] ?? status}</span>
+    </>
+  )
+}
+
+function MouseLockButton({ locked, onToggle }) {
+  return (
+    <button
+      type="button"
+      className={`voice-button ${locked ? 'on' : 'off'}`}
+      title={
+        locked
+          ? 'Mouse bloqueado en el tablero: Esc o L para soltarlo'
+          : 'Bloquear el mouse dentro del tablero (L)'
+      }
+      onClick={onToggle}
+    >
+      <span className="emote-icon">{locked ? '🔒' : '🔓'}</span>
+      <span className="emote-key">L</span>
+    </button>
   )
 }
 
@@ -673,8 +772,9 @@ function drawBoard(ctx, state, myUserId) {
  */
 function drawGoalBanner(ctx, state) {
   if (!state.serveAtEpochMs || Date.now() >= state.serveAtEpochMs) return
-  const scorer =
-    state.lastScorer === 1 ? state.player1 : state.lastScorer === 2 ? state.player2 : null
+  let scorer = null
+  if (state.lastScorer === 1) scorer = state.player1
+  else if (state.lastScorer === 2) scorer = state.player2
   const text = state.lastScorer ? `¡Gol de ${scorer?.username ?? 'BOT'}!` : '¡A jugar!'
 
   ctx.fillStyle = 'rgba(10, 10, 15, 0.65)'

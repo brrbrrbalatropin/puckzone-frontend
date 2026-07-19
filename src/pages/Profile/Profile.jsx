@@ -97,11 +97,11 @@ export default function Profile() {
 
         <section className="profile-card">
           <h2>Historial</h2>
-          {loading ? (
-            <p className="ranking-empty">Cargando…</p>
-          ) : matches.length === 0 ? (
+          {loading && <p className="ranking-empty">Cargando…</p>}
+          {!loading && matches.length === 0 && (
             <p className="ranking-empty">Aún no has jugado partidas.</p>
-          ) : (
+          )}
+          {!loading && matches.length > 0 && (
             <ul className="match-history">
               {matches.map((m) => (
                 <li key={m.matchId} className={m.won ? 'won' : 'lost'}>
@@ -112,15 +112,7 @@ export default function Profile() {
                   <span className="match-score">
                     {m.myScore} - {m.rivalScore}
                   </span>
-                  <span
-                    className={`match-elo ${m.vsBot || m.friendly ? 'neutral' : m.won ? 'gain' : 'loss'}`}
-                  >
-                    {m.vsBot
-                      ? '+0 · vs IA'
-                      : m.friendly
-                        ? '+0 · amistosa'
-                        : `${m.eloChange > 0 ? '+' : ''}${m.eloChange}`}
-                  </span>
+                  <span className={`match-elo ${eloClass(m)}`}>{eloLabel(m)}</span>
                 </li>
               ))}
             </ul>
@@ -129,4 +121,16 @@ export default function Profile() {
       </main>
     </div>
   )
+}
+
+/** Color del delta ELO: neutro sin apuesta (bot/amistosa), verde/rojo si movió. */
+function eloClass(m) {
+  if (m.vsBot || m.friendly) return 'neutral'
+  return m.won ? 'gain' : 'loss'
+}
+
+function eloLabel(m) {
+  if (m.vsBot) return '+0 · vs IA'
+  if (m.friendly) return '+0 · amistosa'
+  return `${m.eloChange > 0 ? '+' : ''}${m.eloChange}`
 }

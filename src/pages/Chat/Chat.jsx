@@ -216,12 +216,7 @@ export default function Chat() {
     }
   }
 
-  const conversationTitle =
-    active.type === 'global'
-      ? '💬 Global'
-      : active.type === 'university'
-        ? `🎓 ${user.university}`
-        : `@${active.friend.username}`
+  const conversationTitle = titleOf(active, user.university)
 
   return (
     <div className="app-page">
@@ -338,13 +333,7 @@ export default function Chat() {
 
           <div className="chatpage-messages" ref={scrollRef}>
             {activeMessages.length === 0 && (
-              <p className="chat-empty">
-                {connected
-                  ? active.type === 'dm'
-                    ? `Este es el comienzo de tu conversación con ${active.friend.username}.`
-                    : 'Nadie ha dicho nada todavía. ¡Rompe el hielo!'
-                  : 'Conectando al chat…'}
-              </p>
+              <p className="chat-empty">{emptyConversationText(connected, active)}</p>
             )}
             {activeMessages.map((msg) => (
               <div key={msg.key} className="chatpage-msg">
@@ -386,63 +375,96 @@ export default function Chat() {
         {/* ── Derecha: perfil del interlocutor o descripción del canal ── */}
         <aside className="chatpage-profile">
           {active.type === 'dm' ? (
-            <>
-              <div
-                className="chatpage-profile-banner"
-                style={{ background: userColor(active.friend.userId) }}
-              />
-              <Avatar userId={active.friend.userId} username={active.friend.username} size={72} />
-              <h3>{active.friend.username}</h3>
-              <p className="chatpage-profile-uni">🎓 {active.friend.university || '—'}</p>
-              <p className={`chatpage-profile-presence${active.friend.online ? ' on' : ''}`}>
-                {active.friend.online ? '● En línea' : '○ Desconectado'}
-              </p>
-
-              {profile && (
-                <dl className="chatpage-stats">
-                  <div>
-                    <dt>ELO</dt>
-                    <dd>{profile.elo}</dd>
-                  </div>
-                  <div>
-                    <dt>Posición</dt>
-                    <dd>{profile.position ? `#${profile.position}` : '—'}</dd>
-                  </div>
-                  <div>
-                    <dt>Victorias</dt>
-                    <dd>{profile.wins}</dd>
-                  </div>
-                  <div>
-                    <dt>Derrotas</dt>
-                    <dd>{profile.losses}</dd>
-                  </div>
-                </dl>
-              )}
-              {profileMissing && (
-                <p className="chatpage-hint">Todavía no juega partidas clasificatorias.</p>
-              )}
-
-              <button
-                type="button"
-                className="chatpage-remove"
-                onClick={() => removeFriend(active.friend)}
-              >
-                Eliminar amigo
-              </button>
-            </>
+            <FriendProfile
+              friend={active.friend}
+              profile={profile}
+              profileMissing={profileMissing}
+              onRemove={() => removeFriend(active.friend)}
+            />
           ) : (
-            <>
-              <div className="chatpage-profile-banner neutral" />
-              <h3>{conversationTitle}</h3>
-              <p className="chatpage-hint">
-                {active.type === 'global'
-                  ? 'Canal abierto para todos los jugadores de PuckZone.'
-                  : `Canal exclusivo de ${user.university}: solo ustedes pueden leerlo y escribirlo.`}
-              </p>
-            </>
+            <ChannelProfile
+              active={active}
+              title={conversationTitle}
+              university={user.university}
+            />
           )}
         </aside>
       </main>
     </div>
+  )
+}
+
+function titleOf(active, university) {
+  if (active.type === 'global') return '💬 Global'
+  if (active.type === 'university') return `🎓 ${university}`
+  return `@${active.friend.username}`
+}
+
+function emptyConversationText(connected, active) {
+  if (!connected) return 'Conectando al chat…'
+  if (active.type === 'dm') {
+    return `Este es el comienzo de tu conversación con ${active.friend.username}.`
+  }
+  return 'Nadie ha dicho nada todavía. ¡Rompe el hielo!'
+}
+
+/** Panel derecho en DMs: banner, presencia y stats de ranking del amigo. */
+function FriendProfile({ friend, profile, profileMissing, onRemove }) {
+  return (
+    <>
+      <div
+        className="chatpage-profile-banner"
+        style={{ background: userColor(friend.userId) }}
+      />
+      <Avatar userId={friend.userId} username={friend.username} size={72} />
+      <h3>{friend.username}</h3>
+      <p className="chatpage-profile-uni">🎓 {friend.university || '—'}</p>
+      <p className={`chatpage-profile-presence${friend.online ? ' on' : ''}`}>
+        {friend.online ? '● En línea' : '○ Desconectado'}
+      </p>
+
+      {profile && (
+        <dl className="chatpage-stats">
+          <div>
+            <dt>ELO</dt>
+            <dd>{profile.elo}</dd>
+          </div>
+          <div>
+            <dt>Posición</dt>
+            <dd>{profile.position ? `#${profile.position}` : '—'}</dd>
+          </div>
+          <div>
+            <dt>Victorias</dt>
+            <dd>{profile.wins}</dd>
+          </div>
+          <div>
+            <dt>Derrotas</dt>
+            <dd>{profile.losses}</dd>
+          </div>
+        </dl>
+      )}
+      {profileMissing && (
+        <p className="chatpage-hint">Todavía no juega partidas clasificatorias.</p>
+      )}
+
+      <button type="button" className="chatpage-remove" onClick={onRemove}>
+        Eliminar amigo
+      </button>
+    </>
+  )
+}
+
+/** Panel derecho en canales: descripción del canal activo. */
+function ChannelProfile({ active, title, university }) {
+  return (
+    <>
+      <div className="chatpage-profile-banner neutral" />
+      <h3>{title}</h3>
+      <p className="chatpage-hint">
+        {active.type === 'global'
+          ? 'Canal abierto para todos los jugadores de PuckZone.'
+          : `Canal exclusivo de ${university}: solo ustedes pueden leerlo y escribirlo.`}
+      </p>
+    </>
   )
 }

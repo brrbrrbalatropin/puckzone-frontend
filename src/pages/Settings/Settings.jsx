@@ -130,7 +130,10 @@ export default function Settings() {
             <button type="button" onClick={micTesting ? stopMicTest : startMicTest}>
               {micTesting ? 'Detener prueba' : 'Probar micrófono'}
             </button>
-            <div className="mic-meter" role="meter" aria-label="Nivel del micrófono">
+            {/* Barra decorativa: la prueba del micrófono es visual (ver la
+                barra moverse); sin un aria-valuenow útil, mejor ocultarla al
+                lector de pantalla que anunciar un medidor vacío. */}
+            <div className="mic-meter" aria-hidden="true">
               <div
                 className="mic-meter-fill"
                 style={{ width: `${Math.round(micLevel * 100)}%` }}

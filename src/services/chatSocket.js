@@ -12,7 +12,7 @@ import { API_URL } from './api'
  *   El servidor decide la universidad por el JWT y bloquea el SUBSCRIBE a
  *   canales ajenos; aquí solo se arma el nombre del topic propio.
  * - Mensajes directos: /app/dm {toUserId, text} → cola personal
- *   /user/queue/dm. Llega TODO DM del usuario (enviado o recibido, incluso
+ *   /user/queue/dm. Llega CADA DM del usuario (enviado o recibido, incluso
  *   el eco de lo que él mismo mandó): el que llame decide en qué
  *   conversación pintarlo.
  */
