@@ -46,6 +46,7 @@ export default function Waiting() {
   useEffect(() => {
     stoppedRef.current = false
     notInQueueRef.current = 0
+    playSfx('espera') // se entró a la cola
 
     const poll = async () => {
       let status
@@ -57,6 +58,9 @@ export default function Waiting() {
       if (stoppedRef.current) return
 
       if (status.status === 'MATCHED') {
+        // Solo aquí y no dentro de goToMatch: aceptar el bot ya suena con el
+        // clic del botón y se encimarían los dos.
+        playSfx('rivalEncontrado')
         goToMatch(status.match)
       } else if (status.status === 'NOT_IN_QUEUE') {
         notInQueueRef.current += 1
@@ -94,6 +98,7 @@ export default function Waiting() {
   }
 
   const handleCancel = async () => {
+    playSfx('menuRetroceso')
     stoppedRef.current = true
     clearInterval(intervalRef.current)
     try {

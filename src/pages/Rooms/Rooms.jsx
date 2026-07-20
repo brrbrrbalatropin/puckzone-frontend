@@ -76,6 +76,7 @@ export default function Rooms() {
   }
 
   const handleCancel = async () => {
+    playSfx('menuRetroceso')
     setRoom(null)
     setCopied(false)
     try {

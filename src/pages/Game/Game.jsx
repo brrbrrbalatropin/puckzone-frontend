@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePing } from '../../hooks/usePing'
 import { useSettings } from '../../hooks/useSettings'
 import { createGameConnection } from '../../services/gameSocket'
-import { playSfx } from '../../services/soundService'
+import { playSfx, playRebote, POWER_SFX } from '../../services/soundService'
 import { createVoiceChat } from '../../services/voiceChat'
 
 // Dimensiones lógicas del motor de física (puckzone-game). El canvas usa
@@ -148,7 +148,9 @@ export default function Game() {
       token,
       onEmote: showEmoteBubble,
       onState: (state) => {
-        playStateSfx(currRef.current?.s, state)
+        // currRef es el estado anterior y prevRef el de antes: el rebote
+        // necesita tres puntos para ver el cambio de dirección.
+        playStateSfx(prevRef.current?.s, currRef.current?.s, state, user.userId)
         prevRef.current = currRef.current
         currRef.current = { s: state, t: performance.now() }
         setUi((prev) =>
@@ -561,7 +563,7 @@ function GameOverlays({
           <p>
             {myScore} — {rivalScore} contra {rivalName}
           </p>
-          <Link to="/" className="game-back">
+          <Link to="/" className="game-back" onClick={() => playSfx('menuRetroceso')}>
             Volver al lobby
           </Link>
         </div>
@@ -787,24 +789,75 @@ function drawGoalBanner(ctx, state) {
 }
 
 /**
- * Sonidos de partida por transición de estado (nuevo vs anterior): gol si
- * sube el marcador (también el gol de la victoria, que llega ya FINISHED),
- * aparición del pickup y recogida de poder (un efecto que no estaba). Sin
- * estado anterior no suena nada: reconectar a mitad de partida es silencio,
- * no una ráfaga de eventos viejos.
+ * El servidor no manda evento de colisión, así que el rebote se deduce del
+ * cambio de dirección del disco entre tres estados seguidos: si la velocidad
+ * en un eje se invierte, es que chocó con algo (pared, paleta u obstáculo).
+ * Se descartan los saltos grandes (saque tras gol, que teletransporta el
+ * disco) y los movimientos casi quietos, donde el ruido de la interpolación
+ * invierte el signo sin que haya golpe.
  */
-function playStateSfx(prev, state) {
+const REBOTE_V_MIN = 1.5 // px por tick; por debajo es ruido, no un golpe
+const REBOTE_COOLDOWN_MS = 60 // dos golpes más juntos que esto son el mismo
+
+let ultimoReboteMs = 0
+
+function detectarRebote(prevPrev, prev, state) {
+  if (!prevPrev) return false
+  const vx0 = prev.puckX - prevPrev.puckX
+  const vy0 = prev.puckY - prevPrev.puckY
+  const vx1 = state.puckX - prev.puckX
+  const vy1 = state.puckY - prev.puckY
+
+  // Saque tras gol: el disco reaparece en el centro, no rebotó.
+  if (Math.abs(vx1) > SNAP_DIST || Math.abs(vy1) > SNAP_DIST) return false
+
+  const choqueX = vx0 * vx1 < 0 && Math.abs(vx0) > REBOTE_V_MIN && Math.abs(vx1) > REBOTE_V_MIN
+  const choqueY = vy0 * vy1 < 0 && Math.abs(vy0) > REBOTE_V_MIN && Math.abs(vy1) > REBOTE_V_MIN
+  if (!choqueX && !choqueY) return false
+
+  const ahora = performance.now()
+  if (ahora - ultimoReboteMs < REBOTE_COOLDOWN_MS) return false
+  ultimoReboteMs = ahora
+  return true
+}
+
+/**
+ * Sonidos de partida por transición de estado (nuevo vs anterior): saque al
+ * arrancar, gol (distinto según sea a favor o en contra), desenlace,
+ * aparición/recogida de poderes y rebotes del disco. Sin estado anterior no
+ * suena nada: reconectar a mitad de partida es silencio, no una ráfaga de
+ * eventos viejos.
+ */
+function playStateSfx(prevPrev, prev, state, myUserId) {
   if (!prev) return
-  if (state.score1 > prev.score1 || state.score2 > prev.score2) {
-    playSfx('puntoAnotado')
+  if (state.status === 'PLAYING' && prev.status !== 'PLAYING') {
+    playSfx('inicioPartida')
+  }
+  // Solo con el disco en juego: durante la pausa de gol sigue habiendo
+  // estados, pero el disco está retenido y no debe sonar nada.
+  if (state.status === 'PLAYING' && (!state.serveAtEpochMs || Date.now() >= state.serveAtEpochMs)) {
+    if (detectarRebote(prevPrev, prev, state)) playRebote()
+  }
+  // El gol de la victoria llega ya FINISHED: ahí suena solo el desenlace,
+  // porque encimarle el gol deja dos pistas peleándose el cierre.
+  if (state.status === 'FINISHED' && prev.status !== 'FINISHED') {
+    playSfx(state.winnerId === myUserId ? 'victoria' : 'derrota')
+  } else if (state.score1 > prev.score1 || state.score2 > prev.score2) {
+    const soyPlayer1 = state.player1?.userId === myUserId
+    const anotoPlayer1 = state.score1 > prev.score1
+    playSfx(anotoPlayer1 === soyPlayer1 ? 'golFavor' : 'golContra')
+  }
+  // El saque suena cuando el disco se suelta, no cuando arranca la pausa:
+  // si no, se encimaría con el sonido del gol que acaba de entrar.
+  if (state.lastScorer && state.serveAtEpochMs && state.serveAtEpochMs !== prev.serveAtEpochMs) {
+    setTimeout(() => playSfx('saque'), Math.max(0, state.serveAtEpochMs - Date.now()))
   }
   if (state.pickup && !prev.pickup) playSfx('poderAparece')
   const prevTypes = new Set((prev.effects ?? []).map((e) => e.type))
   for (const effect of state.effects ?? []) {
     if (prevTypes.has(effect.type)) continue
-    // Solo caos y zonas tienen sonido asignado por ahora (SONIDOS.md).
-    if (effect.type === 'CHAOS') playSfx('poderCaos')
-    else if (effect.type === 'FAST_ZONE' || effect.type === 'SLOW_ZONE') playSfx('poderZona')
+    const sfx = POWER_SFX[effect.type]
+    if (sfx) playSfx(sfx)
   }
 }
 

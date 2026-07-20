@@ -10,6 +10,7 @@ import {
   sendFriendRequest,
 } from '../../services/friendsService'
 import { getPlayer } from '../../services/rankingService'
+import { playSfx } from '../../services/soundService'
 import { userColor, userInitial } from '../../utils/userColor'
 
 const MAX_LENGTH = 200
@@ -93,6 +94,8 @@ export default function Chat() {
       onUniversityMessage: (msg) => setUniMessages((prev) => [...prev, msg]),
       onDirectMessage: (dm) => {
         const other = dm.senderId === user.userId ? dm.recipientId : dm.senderId
+        // Solo lo que llega de fuera: los propios ya los escribiste tú.
+        if (dm.senderId !== user.userId) playSfx('mensajeChat')
         setDmThreads((prev) => ({ ...prev, [other]: [...(prev[other] || []), dm] }))
         const current = activeRef.current
         const isOpen = current.type === 'dm' && current.friend.userId === other

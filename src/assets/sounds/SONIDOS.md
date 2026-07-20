@@ -1,81 +1,126 @@
 # Catálogo de sonidos
 
-Estado del mapeo al 2026-07-18. Los archivos llegaron como `.mp3.mpeg`
-(extensión doble que les pegó la descarga; son MP3 legítimos) y se
-renombraron a `.mp3` con nombres sin espacios ni `+`.
+Estado al 2026-07-20, tras el segundo drop del ingeniero de sonido y la
+revisión con él. Los archivos llegaron con espacios y mayúsculas
+(`OPCION REBOTE 1.mp3`, `menu+.mp3`, `REBOTE OPCION}.mp3`) y se renombraron a
+kebab-case, que es lo que Vite necesita para importarlos sin fricción.
 
 Todo suena por el canal **sfx** de Ajustes (volumen y mute aplican en vivo);
 el cableado vive en `src/services/soundService.js` y los eventos de partida
 en `playStateSfx` de `Game.jsx`.
 
-## Asignados (ya suenan en el juego)
+## Corrección del mapeo anterior
 
-| Archivo | Duración | Evento |
+El primer drop llegó sin nombres claros y se asignó a ojo. El segundo trajo
+los mismos archivos con el nombre real del ingeniero, y por hash resultó que
+tres estaban mal asignados:
+
+| Nombre viejo | Uso que tenía | Lo que realmente es |
 |---|---|---|
-| `seleccionar.mp3` | 3s | Clic en botones principales: Jugar, Jugar contra el bot (lobby y espera), Crear sala, Unirse a sala |
-| `poder.mp3` | 6s | Aparece un pickup de poder en el tablero |
-| `poder-2.mp3` | 4s | Se recoge **Zona rápida** o **Zona lenta** (compartido por ahora) |
-| `poder-3.mp3` | 3s | Se recoge **Caos** |
-| `punto-anotado.mp3` | 11s | Gol (de cualquiera de los dos, incluido el de la victoria) |
+| `poder-2.mp3` | zona rápida/lenta | descarte (ver Fantasma) |
+| `poder-1.mp3` | sin asignar | Zona lenta |
+| `punto-anotado.mp3` | **gol** | Zona rápida |
 
-## Sin asignar — revisar con el ingeniero de sonido
+Por eso el "sonido de gol" duraba 11s: nunca fue un sonido de gol.
 
-| Archivo | Duración | Nota |
-|---|---|---|
-| `menu.mp3` | 2s | (dudoso) ¿hover sobre botones? ¿clic genérico? |
-| `menu-mas.mp3` | 2s | (dudoso) ¿entrar/avanzar en un menú? |
-| `menu-retroceso.mp3` | 2s | (dudoso) ¿volver/cancelar? (candidatos: Cancelar de la espera, Cancelar sala, cerrar sesión) |
-| `poder-1.mp3` | 2s | Sin destino recordado; candidato para los poderes hoy mudos |
+**Fantasma**: llegaron dos, `poder Fantasma.mp3` y `Poder Fantasmaa.mp3`
+(doble A). El ingeniero confirmó que el bueno es **el de doble A**; el otro
+era descarte y se eliminó (era byte-idéntico al viejo `poder-2.mp3`).
+
+## Procesado con ffmpeg (2026-07-20)
+
+Casi todo el lote venía con cola de silencio: hasta 6s en el peor caso. Se
+recortó todo por debajo de −50 dBFS con
+`areverse,silenceremove=...,areverse` y se reencodeó a VBR `-q:a 2`.
+La carpeta pasó de ~5.4 MB a ~2.6 MB. Dos excepciones:
+
+- `musica-principal.mp3` no se tocó (no tiene cola y es la pista de música).
+- `victoria.mp3` se dejó en su versión original: tenía solo 1.5s de cola y el
+  reencode lo hacía *crecer* de 544 a 559 KB.
+
+`gol-contra` llegó como WAV de 1.8 MB y se convirtió a MP3: **59 KB**.
+
+`derrota-alt.mp3` (llegó como `OPCION PERDER.mp3`) se eliminó: además de
+pesar 0 KB, ffmpeg no encontraba ni dos frames MPEG seguidos — venía corrupto.
+
+`opcion.mp3` (llegó como `ocion.mp3`) resultó ser una **octava variante de
+rebote**, no un sonido de menú: mismo peso (45 KB) y mismo perfil de duración
+que `rebote-alt-1/2/3`. Se renombró a `rebote-alt-5.mp3`.
+
+## Asignados (suenan en el juego)
+
+| Archivo | Evento |
+|---|---|
+| `seleccionar.mp3` | Clic en botones principales: Jugar, Jugar contra el bot, Crear/Unirse a sala |
+| `menu-mas.mp3` | Avanzar: entrar a una sección desde el Header (Salas, Chat, Ranking, Perfil, Ajustes) |
+| `menu-retroceso.mp3` | Retroceder: volver al lobby (logo y Lobby del Header, "Volver al lobby" del final de partida) y cancelar (cola, sala privada) |
+| `espera.mp3` | Se entra a la cola de matchmaking |
+| `rival-encontrado.mp3` | El matchmaking empareja (solo humanos: aceptar bot ya suena con el clic) |
+| `mensaje-chat.mp3` | Llega un DM de otra persona (los propios no suenan) |
+| `inicio-partida.mp3` | Arranque de la partida (transición a PLAYING) |
+| `inicio-partida-alt.mp3` | Saque tras cada gol, disparado en `serveAtEpochMs` |
+| `gol-favor.mp3` | Gol propio |
+| `gol-contra.mp3` | Gol del rival |
+| `victoria.mp3` | Fin de partida ganada (incluye rendición del rival) |
+| `derrota.mp3` | Fin de partida perdida |
+| `poder-aparece.mp3` | Brota un pickup en el tablero |
+| `poder-zona-rapida.mp3` | Recoger Zona rápida |
+| `poder-zona-lenta.mp3` | Recoger Zona lenta |
+| `poder-caos.mp3` | Recoger Caos |
+| `poder-obstaculo.mp3` | Recoger Obstáculo |
+| `poder-fantasma.mp3` | Recoger Fantasma |
+| `poder-escudo.mp3` | Recoger Escudo |
+| `rebote-1/2/3.mp3`, `rebote-alt-1..5.mp3` | Rebote del disco, **una de las 8 al azar** en cada golpe |
+
+El mapeo tipo→sonido de los poderes vive en `POWER_SFX` de
+`soundService.js`, con las claves que manda el servidor. Los rebotes salen
+por `playRebote()`.
+
+## Detección de rebotes (heurística — verificar jugando)
+
+El servidor **no manda evento de colisión**: el `GameState` solo trae
+`puckX`/`puckY`. El rebote se deduce en `detectarRebote` comparando tres
+estados seguidos: si la velocidad en un eje cambia de signo, chocó con algo
+(pared, paleta u obstáculo). Salvaguardas:
+
+- `REBOTE_V_MIN = 1.5` px/tick — por debajo es ruido de interpolación.
+- `REBOTE_COOLDOWN_MS = 60` — dos detecciones más juntas son el mismo golpe.
+- Se ignoran saltos mayores a `SNAP_DIST` (el saque teletransporta el disco).
+- Solo con la partida en PLAYING y el disco ya soltado.
+
+Los dos números están puestos a ojo. **Hay que jugar una partida y ajustarlos**:
+si suena de más, subir `REBOTE_V_MIN`; si se pierde golpes suaves, bajarlo.
+No distingue golpe de paleta de rebote en pared — para eso habría que mirar
+la posición del disco respecto a las paletas, o que el servidor mande el evento.
+
+## Pendientes
+
+- **Música de fondo** — `musica-principal.mp3` (38.8s, sin cola muda, buen
+  candidato a loop) está sin cablear. El canal `music` de Ajustes existe pero
+  `soundService` aún no lo maneja: haría falta instancia única, `loop = true`
+  y que `SettingsContext` empuje también ese volumen.
+- **`inicio-partida.mp3` dura 7.4s de sonido real** — largo para un arranque.
+  Escuchar si molesta.
+- **`victoria.mp3` dura 21.7s** — el overlay final aguanta, pero es una pieza
+  larga. Decidir si se recorta.
+- **`menu.mp3` sin asignar** — es el único que quedó sin destino.
 
 ## Huecos sin archivo (pedir/crear)
 
-Lista de deseos para la reunión, por prioridad. Todo lo de partida ya es
-detectable desde el estado que manda el servidor: conseguido el mp3, el
-cableado es una línea en el mapeo.
-
-### Prioridad alta — se nota que faltan
-
-- **Golpe paleta-disco** — EL sonido de un air hockey; hoy la partida es
-  muda entre eventos. Detectable por el cambio brusco de velocidad del
-  disco. Ideal muy corto (<300ms): suena decenas de veces por partida.
-- **Rebote en la pared** — hermano del anterior, más seco/suave para
-  distinguirlos. Podría arrancarse compartiendo el mismo del golpe.
-- **Victoria** y **derrota** — el overlay final es mudo. Dos piezas
-  distintas (fanfarria vs lamento); cierre emocional de cada partida.
-- **Música de fondo** — el canal `music` de Ajustes existe y funciona pero
-  no tiene pista. Decidir: ¿una para toda la app o lobby y partida
-  separadas? Debe aguantar loop sin costura (que el corte no se note).
-
-### Prioridad media — completan lo que ya suena
-
-- **Recoger Obstáculo, Fantasma y Escudo** — hoy mudos (solo Caos y zonas
-  suenan). O un genérico (candidato: `poder-1.mp3`) o uno por poder, que es
-  lo ideal: el jugador identifica el poder sin mirar el ícono.
-- **"¡Rival encontrado!"** — en la sala de espera, cuando el matchmaking
-  empareja (hoy solo cambia la pantalla). Tipo campanita de éxito.
-- **Saque / "¡A jugar!"** — al soltarse el disco tras la pausa de gol y en
-  el arranque (silbato/beep de inicio). El banner ya existe, sonaría con él.
-- **Rival desconectado / reconectado** — acompaña el overlay de pausa con
-  cuenta regresiva (uno de alerta y uno de alivio).
-
-### Prioridad baja — detalles con ánimo de pulir
-
+- **Rival desconectado / reconectado** — acompaña el overlay de pausa.
 - **Emotes** — pop corto al aparecer la burbuja (👍😂😮😭😡GG).
-- **Notificación de chat** — DM recibido con la pestaña /chat abierta, y
-  quizá otro para solicitud de amistad recibida/aceptada.
-- **Error / acción inválida** — código de sala inválido, cola llena, etc.
-  (candidato natural: `menu-retroceso.mp3` si se confirma su intención).
-- **Voz conectada/cortada** — el chat de voz estilo Discord pide sus
-  bloop de entrada/salida.
-- **Destello del fantasma** — el disco invisible se revela 250ms al
-  rebotar; un "shimmer" sutil lo haría más legible (y más aterrador).
-- **Copiar código de sala** — clic de confirmación al copiar.
+- **Solicitud de amistad** recibida/aceptada.
+- **Error / acción inválida** — código de sala inválido, cola llena.
+- **Voz conectada/cortada** — bloop de entrada/salida del chat de voz.
+- **Destello del fantasma** — el disco invisible se revela 250ms al rebotar.
+- **Copiar código de sala** — clic de confirmación.
 
-### Notas técnicas para producir/elegir los archivos
+## Notas técnicas
 
-- MP3 está bien (es lo que ya hay); cortos y normalizados entre sí para que
-  ningún efecto reviente los oídos respecto a los demás.
-- Los efectos salen por el canal `sfx` y la música por `music`: volúmenes
-  independientes en Ajustes, ya funcionales.
-- `punto-anotado.mp3` dura 11s y la pausa de gol ~2s: el sonido sigue
-  sonando ya reanudado el juego. Si molesta, pedir una versión corta (~3s).
+- MP3 y cortos; normalizados entre sí para que ningún efecto reviente los
+  oídos respecto a los demás.
+- Efectos por el canal `sfx`, música por `music`: volúmenes independientes.
+- Los nombres van en kebab-case sin espacios ni caracteres raros: se importan
+  como módulos desde `soundService.js`.
+- Copia de los archivos tal como llegaron (antes del recorte) en el
+  scratchpad de la sesión, por si hay que rehacer algún procesado.
