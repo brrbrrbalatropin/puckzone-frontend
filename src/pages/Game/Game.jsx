@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePing } from '../../hooks/usePing'
 import { useSettings } from '../../hooks/useSettings'
 import { createGameConnection } from '../../services/gameSocket'
-import { playSfx, playRebote, POWER_SFX } from '../../services/soundService'
+import { playSfx, playRebote, stopMusic, POWER_SFX } from '../../services/soundService'
 import { createVoiceChat } from '../../services/voiceChat'
 
 // Dimensiones lógicas del motor de física (puckzone-game). El canvas usa
@@ -138,6 +138,12 @@ export default function Game() {
         prev[side]?.key === key ? { ...prev, [side]: null } : prev,
       )
     }, EMOTE_BUBBLE_MS)
+  }, [])
+
+  // La musica de los menus no acompaña la partida. No se reanuda al salir:
+  // de eso se encarga el Header al volver a cualquier pantalla de menu.
+  useEffect(() => {
+    stopMusic()
   }, [])
 
   useEffect(() => {
@@ -796,7 +802,14 @@ function drawGoalBanner(ctx, state) {
  * disco) y los movimientos casi quietos, donde el ruido de la interpolación
  * invierte el signo sin que haya golpe.
  */
-const REBOTE_V_MIN = 1.5 // px por tick; por debajo es ruido, no un golpe
+// px por tick. Tiene que ser MUY bajo: la zona lenta frena el disco de forma
+// proporcional (SLOW_ZONE_BRAKE = 2.5 por segundo en el servidor), asi que
+// desde los 300 px/s del saque —5 px por tick— cae a ~25 px/s = 0.4 px por
+// tick en apenas un segundo dentro de la zona. Con el 1.5 de la primera
+// version, TODOS los golpes dentro de una zona lenta se descartaban como
+// ruido. Las posiciones vienen crudas del servidor (no interpoladas), asi
+// que no hay ruido real que filtrar: basta con excluir el disco detenido.
+const REBOTE_V_MIN = 0.15
 const REBOTE_COOLDOWN_MS = 60 // dos golpes más juntos que esto son el mismo
 
 let ultimoReboteMs = 0

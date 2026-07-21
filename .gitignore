@@ -22,6 +22,9 @@ dist-ssr
 tfplan
 # (.terraform.lock.hcl SI se versiona, no ignorarlo)
 
+# Notas de trabajo del catalogo de sonidos (no va al repo)
+src/assets/sounds/SONIDOS.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

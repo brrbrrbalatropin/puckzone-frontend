@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { decodeJwt } from '../services/jwt'
+import { stopMusic } from '../services/soundService'
 
 /**
  * Estado global de sesion: token JWT + datos del usuario.
@@ -40,6 +41,9 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logout = useCallback(() => {
+    // Cerrar sesion lleva al login, que no tiene Header y por tanto no
+    // volveria a arrancarla: hay que pararla aqui o seguiria sonando.
+    stopMusic()
     localStorage.removeItem('puckzone_token')
     localStorage.removeItem('puckzone_refresh_token')
     localStorage.removeItem('puckzone_user')

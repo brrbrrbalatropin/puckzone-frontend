@@ -1,6 +1,7 @@
+import { useEffect } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { playSfx } from '../services/soundService'
+import { playMusic, playSfx } from '../services/soundService'
 
 /**
  * Barra superior comun a todas las pantallas autenticadas:
@@ -11,6 +12,17 @@ import { playSfx } from '../services/soundService'
  */
 export default function Header() {
   const { user, logout } = useAuth()
+
+  // La musica vive aqui porque este Header se renderiza en exactamente las
+  // pantallas de menu (lobby, salas, chat, ranking, perfil y ajustes) y en
+  // ninguna otra. Importa que suene en Ajustes: si no, el slider de volumen
+  // de musica seria un control a ciegas.
+  //
+  // A proposito NO se para al desmontar: navegar entre menus haria un corte
+  // en cada clic. La para quien debe: la partida al entrar y el logout.
+  useEffect(() => {
+    playMusic()
+  }, [])
 
   const avanzar = () => playSfx('menuMas')
   const retroceder = () => playSfx('menuRetroceso')
