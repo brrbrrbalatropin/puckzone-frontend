@@ -77,11 +77,11 @@ export default function Ranking() {
               </thead>
               <tbody>
                 {players.map((p) => (
-                  <tr key={p.id} className={p.id === user.userId ? 'me' : ''}>
+                  <tr key={p.username} className={p.username === user.username ? 'me' : ''}>
                     <td>{p.position}</td>
                     <td className="col-left">
                       {p.username}
-                      {p.id === user.userId && <span className="me-tag"> (tú)</span>}
+                      {p.username === user.username && <span className="me-tag"> (tú)</span>}
                     </td>
                     <td className="col-left">{p.university}</td>
                     <td className="col-elo">{p.elo}</td>

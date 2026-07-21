@@ -39,7 +39,7 @@ export default function LobbyLeaderboard() {
       {players?.length > 0 && (
         <ol className="leaderboard-list">
           {players.map((p) => (
-            <li key={p.id} className={p.id === user.userId ? 'me' : ''}>
+            <li key={p.username} className={p.username === user.username ? 'me' : ''}>
               <span className="leaderboard-pos">#{p.position}</span>
               <span className="leaderboard-name" title={`${p.username} (${p.university})`}>
                 {p.username}
