@@ -71,7 +71,7 @@ export function setSfxVolume(volume) {
 }
 
 function reproducir(url) {
-  if (!url || sfxVolume <= 0) return
+  if (!url || sfxVolume <= 0) return null
   // Un Audio nuevo por reproducción: dos sonidos pueden solaparse (gol
   // mientras suena un poder) y el navegador cachea el archivo igual.
   const audio = new Audio(url)
@@ -79,10 +79,28 @@ function reproducir(url) {
   // Sin un gesto previo del usuario (p. ej. refresh directo a /game) el
   // navegador puede negar el play: el sonido se pierde y no pasa nada.
   audio.play().catch(() => {})
+  return audio
 }
 
 export function playSfx(name) {
   reproducir(SOUND_URLS[name])
+}
+
+// Victoria y derrota son las unicas que pueden sobrevivir a su pantalla:
+// victoria dura 21.7s y el jugador suele volver al lobby mucho antes, con lo
+// que se quedaba sonando encima de la musica del menu. Se guarda la
+// referencia —solo de estas— para poder cortarlas al salir de la partida;
+// los demas efectos son cortos y se dejan terminar solos.
+let sfxCierre = null
+
+export function playSfxCierre(name) {
+  sfxCierre?.pause()
+  sfxCierre = reproducir(SOUND_URLS[name])
+}
+
+export function stopSfxCierre() {
+  sfxCierre?.pause()
+  sfxCierre = null
 }
 
 /** Rebote del disco: una de las 3 variantes, al azar. */

@@ -4,7 +4,14 @@ import { useAuth } from '../../hooks/useAuth'
 import { usePing } from '../../hooks/usePing'
 import { useSettings } from '../../hooks/useSettings'
 import { createGameConnection } from '../../services/gameSocket'
-import { playSfx, playRebote, stopMusic, POWER_SFX } from '../../services/soundService'
+import {
+  playSfx,
+  playSfxCierre,
+  playRebote,
+  stopMusic,
+  stopSfxCierre,
+  POWER_SFX,
+} from '../../services/soundService'
 import { createVoiceChat } from '../../services/voiceChat'
 
 // Dimensiones lógicas del motor de física (puckzone-game). El canvas usa
@@ -142,8 +149,11 @@ export default function Game() {
 
   // La musica de los menus no acompaña la partida. No se reanuda al salir:
   // de eso se encarga el Header al volver a cualquier pantalla de menu.
+  // Al salir se corta ademas el sonido de victoria/derrota, que dura mas que
+  // el tiempo que la gente se queda mirando el marcador final.
   useEffect(() => {
     stopMusic()
+    return () => stopSfxCierre()
   }, [])
 
   useEffect(() => {
@@ -874,7 +884,7 @@ function playStateSfx(prevPrev, prev, state, myUserId) {
   // El gol de la victoria llega ya FINISHED: ahí suena solo el desenlace,
   // porque encimarle el gol deja dos pistas peleándose el cierre.
   if (state.status === 'FINISHED' && prev.status !== 'FINISHED') {
-    playSfx(state.winnerId === myUserId ? 'victoria' : 'derrota')
+    playSfxCierre(state.winnerId === myUserId ? 'victoria' : 'derrota')
   } else if (state.score1 > prev.score1 || state.score2 > prev.score2) {
     const soyPlayer1 = state.player1?.userId === myUserId
     const anotoPlayer1 = state.score1 > prev.score1
