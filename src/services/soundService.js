@@ -16,6 +16,7 @@ import poderZonaLentaUrl from '../assets/sounds/poder-zona-lenta.mp3'
 import poderObstaculoUrl from '../assets/sounds/poder-obstaculo.mp3'
 import poderFantasmaUrl from '../assets/sounds/poder-fantasma.mp3'
 import poderEscudoUrl from '../assets/sounds/poder-escudo.mp3'
+import musicaPrincipalUrl from '../assets/sounds/musica-principal.mp3'
 import rebote1Url from '../assets/sounds/rebote-1.mp3'
 import rebote2Url from '../assets/sounds/rebote-2.mp3'
 import rebote3Url from '../assets/sounds/rebote-3.mp3'
@@ -84,7 +85,55 @@ export function playSfx(name) {
   reproducir(SOUND_URLS[name])
 }
 
-/** Rebote del disco: una de las 8 variantes, al azar. */
+/** Rebote del disco: una de las 3 variantes, al azar. */
 export function playRebote() {
   reproducir(REBOTE_URLS[Math.floor(Math.random() * REBOTE_URLS.length)])
+}
+
+// --- Música de fondo (canal `music` de Ajustes) -------------------------
+// Instancia única en loop, a diferencia de los efectos: dos pistas sonando
+// encima serían un desastre y hay que poder subirle el volumen o pararla
+// desde cualquier parte.
+
+let musicVolume = 0.7
+let musica = null
+let esperandoGesto = false
+
+export function setMusicVolume(volume) {
+  musicVolume = volume
+  if (musica) musica.volume = volume
+}
+
+/**
+ * Si el navegador niega el play por falta de gesto del usuario (entrar
+ * directo a la URL, recargar), se reintenta una sola vez en la primera
+ * interacción que haya. Sin esto la música no vuelve nunca en esa pestaña.
+ */
+function reintentarConGesto() {
+  if (esperandoGesto) return
+  esperandoGesto = true
+  const alInteractuar = () => {
+    esperandoGesto = false
+    document.removeEventListener('pointerdown', alInteractuar)
+    document.removeEventListener('keydown', alInteractuar)
+    musica?.play().catch(() => {})
+  }
+  document.addEventListener('pointerdown', alInteractuar, { once: true })
+  document.addEventListener('keydown', alInteractuar, { once: true })
+}
+
+export function playMusic() {
+  if (musica) {
+    // Ya estaba: volver de otra pantalla no reinicia la pista desde cero.
+    if (musica.paused) musica.play().catch(reintentarConGesto)
+    return
+  }
+  musica = new Audio(musicaPrincipalUrl)
+  musica.loop = true
+  musica.volume = musicVolume
+  musica.play().catch(reintentarConGesto)
+}
+
+export function stopMusic() {
+  musica?.pause()
 }

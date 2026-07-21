@@ -849,10 +849,14 @@ function playStateSfx(prevPrev, prev, state, myUserId) {
   if (arrancando && prev.status !== 'PLAYING') {
     playSfx('inicioPartida')
   }
-  // Solo con el disco en juego: durante la pausa de gol sigue habiendo
-  // estados, pero el disco está retenido y no debe sonar nada.
-  if (state.status === 'PLAYING' && (!state.serveAtEpochMs || Date.now() >= state.serveAtEpochMs)) {
-    if (detectarRebote(prevPrev, prev, state)) playRebote()
+  // Sin comparar relojes. La version anterior exigia Date.now() >=
+  // serveAtEpochMs, mezclando el reloj del navegador con el del servidor: con
+  // unos segundos de desfase se comia los primeros rebotes despues de cada
+  // saque. No hace falta: durante la pausa el servidor deja el disco quieto
+  // (PhysicsEngine.tick devuelve NONE), y un disco quieto no tiene cambio de
+  // direccion que detectar, asi que la propia fisica ya hace de guarda.
+  if (state.status === 'PLAYING' && detectarRebote(prevPrev, prev, state)) {
+    playRebote()
   }
   // El gol de la victoria llega ya FINISHED: ahí suena solo el desenlace,
   // porque encimarle el gol deja dos pistas peleándose el cierre.

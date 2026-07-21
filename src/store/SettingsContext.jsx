@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { setSfxVolume } from '../services/soundService'
+import { setMusicVolume, setSfxVolume } from '../services/soundService'
 import { SettingsContext } from './settings-context'
 
 /**
@@ -43,6 +43,12 @@ export function SettingsProvider({ children }) {
   useEffect(() => {
     setSfxVolume(settings.sfx.muted ? 0 : settings.sfx.volume / 100)
   }, [settings.sfx.muted, settings.sfx.volume])
+
+  // La musica es una instancia unica en loop: el volumen se le empuja igual
+  // que el de los efectos, para que el slider de Ajustes se sienta en vivo.
+  useEffect(() => {
+    setMusicVolume(settings.music.muted ? 0 : settings.music.volume / 100)
+  }, [settings.music.muted, settings.music.volume])
 
   const updateChannel = useCallback((channelId, patch) => {
     setSettings((prev) => {

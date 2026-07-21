@@ -70,6 +70,7 @@ que `rebote-alt-1/2/3`. Se renombró a `rebote-alt-5.mp3`.
 | `poder-fantasma.mp3` | Recoger Fantasma |
 | `poder-escudo.mp3` | Recoger Escudo |
 | `rebote-1/2/3.mp3` | Rebote del disco, **una de las 3 al azar** en cada golpe |
+| `musica-principal.mp3` | Música del lobby en loop — canal `music`, no `sfx` |
 
 El mapeo tipo→sonido de los poderes vive en `POWER_SFX` de
 `soundService.js`, con las claves que manda el servidor. Los rebotes salen
@@ -117,12 +118,42 @@ si suena de más, subir `REBOTE_V_MIN`; si se pierde golpes suaves, bajarlo.
 No distingue golpe de paleta de rebote en pared — para eso habría que mirar
 la posición del disco respecto a las paletas, o que el servidor mande el evento.
 
+**Nada de comparar relojes.** La primera versión exigía además
+`Date.now() >= state.serveAtEpochMs` para no sonar durante la pausa de
+anuncio. Eso mezcla el reloj del navegador con el del servidor: con unos
+segundos de desfase, la condición seguía siendo falsa después del saque real
+y se comía los primeros rebotes de cada arranque y de cada gol. Es
+innecesario: durante la pausa `PhysicsEngine.tick` devuelve `NONE` y deja el
+disco quieto, y un disco quieto no tiene cambio de dirección que detectar.
+
+Ojo: `drawGoalBanner` **sí** compara `Date.now()` con `serveAtEpochMs`. Si
+hay desfase de reloj, el banner de gol dura de más o de menos. No se tocó
+porque es cosmético y el arreglo de verdad sería que el servidor mande
+tiempos relativos ("faltan N ms") en vez de absolutos.
+
 ## Pendientes
 
-- **Música de fondo** — `musica-principal.mp3` (38.8s, sin cola muda, buen
-  candidato a loop) está sin cablear. El canal `music` de Ajustes existe pero
-  `soundService` aún no lo maneja: haría falta instancia única, `loop = true`
-  y que `SettingsContext` empuje también ese volumen.
+- **Música solo en el lobby** — `musica-principal.mp3` (38.8s en loop) suena
+  en la pantalla principal y se para al salir a la partida, sin rebobinar
+  (volver la retoma). Falta decidir si debería seguir sonando también en
+  Salas, Chat, Ranking y Perfil, que hoy quedan mudos.
+## El caso de `poder-zona-lenta.mp3` (resuelto)
+
+El archivo original no se oía en parlantes normales, y no era cuestión de
+volumen: medía −3.1 dB de pico, de los más altos del lote. El espectrograma
+mostró que toda su energía estaba por debajo de ~100 Hz —una franja pegada a
+DC, con los armónicos a −90 dBFS— o sea en frecuencias que un parlante de
+portátil o celular no reproduce.
+
+Se probaron tres versiones: +1 octava, +2 octavas (`asetrate` + `atempo`) y
+un simple `volume=12dB`. **Ganó la de +12 dB**, que es la que está en uso.
+La razón es contraintuitiva: esa versión satura contra 0 dBFS, y el recorte
+de la onda genera armónicos nuevos en frecuencias altas que el original no
+tenía. La distorsión, en este caso, es justo lo que lo vuelve audible.
+
+Lección para el resto del lote: si el ingeniero mezcla con audífonos o
+monitores buenos, un sonido así le suena perfecto. Vale la pena que revise en
+un parlante malo antes de mandar más.
 - **`inicio-partida.mp3` dura 7.4s de sonido real** — largo para un arranque.
   Escuchar si molesta.
 - **`victoria.mp3` dura 21.7s** — el overlay final aguanta, pero es una pieza

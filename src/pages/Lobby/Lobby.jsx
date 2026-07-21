@@ -7,7 +7,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { getActiveGame } from '../../services/gameService'
 import { joinQueue, playBot } from '../../services/matchmakingService'
 import { getPlayer } from '../../services/rankingService'
-import { playSfx } from '../../services/soundService'
+import { playMusic, playSfx, stopMusic } from '../../services/soundService'
 
 /**
  * Pantalla principal tras el login, a tres columnas: vistazo del
@@ -25,6 +25,13 @@ export default function Lobby() {
   const [error, setError] = useState('')
   const [searching, setSearching] = useState(false)
   const [activeGame, setActiveGame] = useState(null)
+
+  // Musica de fondo del lobby. Se para al salir (a la partida, por ejemplo)
+  // pero no se rebobina: volver al lobby la retoma donde iba.
+  useEffect(() => {
+    playMusic()
+    return () => stopMusic()
+  }, [])
 
   useEffect(() => {
     let cancelled = false
