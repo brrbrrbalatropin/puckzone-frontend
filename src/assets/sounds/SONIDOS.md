@@ -57,8 +57,7 @@ que `rebote-alt-1/2/3`. Se renombró a `rebote-alt-5.mp3`.
 | `espera.mp3` | Se entra a la cola de matchmaking |
 | `rival-encontrado.mp3` | El matchmaking empareja (solo humanos: aceptar bot ya suena con el clic) |
 | `mensaje-chat.mp3` | Llega un DM de otra persona (los propios no suenan) |
-| `inicio-partida.mp3` | Arranque de la partida (transición a PLAYING) |
-| `inicio-partida-alt.mp3` | Saque tras cada gol, disparado en `serveAtEpochMs` |
+| `inicio-partida.mp3` | Arranque de la partida, **una sola vez** (no en los saques tras gol) |
 | `gol-favor.mp3` | Gol propio |
 | `gol-contra.mp3` | Gol del rival |
 | `victoria.mp3` | Fin de partida ganada (incluye rendición del rival) |
@@ -70,11 +69,36 @@ que `rebote-alt-1/2/3`. Se renombró a `rebote-alt-5.mp3`.
 | `poder-obstaculo.mp3` | Recoger Obstáculo |
 | `poder-fantasma.mp3` | Recoger Fantasma |
 | `poder-escudo.mp3` | Recoger Escudo |
-| `rebote-1/2/3.mp3`, `rebote-alt-1..5.mp3` | Rebote del disco, **una de las 8 al azar** en cada golpe |
+| `rebote-1/2/3.mp3` | Rebote del disco, **una de las 3 al azar** en cada golpe |
 
 El mapeo tipo→sonido de los poderes vive en `POWER_SFX` de
 `soundService.js`, con las claves que manda el servidor. Los rebotes salen
 por `playRebote()`.
+
+## Descartados tras probar el juego (2026-07-20)
+
+- `inicio-partida-alt.mp3` (llegó como `OPCION INICIO DE PARTIDA.mp3`) — no
+  gustó. Con él se va también el sonido de saque tras gol: hoy no hay.
+- `rebote-alt-1..5.mp3` (llegaron como `OPCION REBOTE*`, `REBOTE OPCION}` y
+  `ocion.mp3`) — confusos al oído mezclados con los otros. Quedan solo
+  `rebote-1/2/3`.
+- `poder Fantasma.mp3` (el de una sola A) y `OPCION PERDER.mp3` (corrupto).
+
+Copia de todos, tal como llegaron, en el scratchpad de la sesión.
+
+## Por qué el arranque no sonaba (arreglado)
+
+La primera versión esperaba la transición `WAITING → PLAYING` comparando el
+estado nuevo con el anterior. No funciona: el servidor hace esa transición en
+`GameRoomService.playerConnected`, es decir **en el mismo momento en que el
+jugador se conecta**. Contra el bot —que ya cuenta como conectado— el primer
+estado que recibe el navegador ya viene en `PLAYING`, y ese primero se
+descartaba por no tener con qué compararlo. Contra un humano sí sonaba,
+porque el que llega primero ve la sala en `WAITING`.
+
+Ahora el arranque se reconoce por el saque inicial (`serveAtEpochMs` en el
+futuro y `lastScorer` vacío), que sirve tanto en el primer estado como en la
+transición, y de paso deja mudas las reconexiones a mitad de partida.
 
 ## Detección de rebotes (heurística — verificar jugando)
 

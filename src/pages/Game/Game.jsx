@@ -829,8 +829,24 @@ function detectarRebote(prevPrev, prev, state) {
  * eventos viejos.
  */
 function playStateSfx(prevPrev, prev, state, myUserId) {
-  if (!prev) return
-  if (state.status === 'PLAYING' && prev.status !== 'PLAYING') {
+  // Arranque de partida. No sirve esperar la transición WAITING -> PLAYING:
+  // el servidor la hace en playerConnected, o sea en el mismo momento en que
+  // te conectas, así que contra el bot (que ya cuenta como conectado) el
+  // PRIMER estado que llega ya viene en PLAYING y no hay transición que ver.
+  // Se reconoce por el saque inicial: hay serveAtEpochMs en el futuro y nadie
+  // ha anotado. Eso además deja mudas las reconexiones a mitad de partida,
+  // donde el saque ya pasó.
+  const arrancando =
+    state.status === 'PLAYING' &&
+    !state.lastScorer &&
+    state.serveAtEpochMs &&
+    Date.now() < state.serveAtEpochMs
+
+  if (!prev) {
+    if (arrancando) playSfx('inicioPartida')
+    return
+  }
+  if (arrancando && prev.status !== 'PLAYING') {
     playSfx('inicioPartida')
   }
   // Solo con el disco en juego: durante la pausa de gol sigue habiendo
@@ -846,11 +862,6 @@ function playStateSfx(prevPrev, prev, state, myUserId) {
     const soyPlayer1 = state.player1?.userId === myUserId
     const anotoPlayer1 = state.score1 > prev.score1
     playSfx(anotoPlayer1 === soyPlayer1 ? 'golFavor' : 'golContra')
-  }
-  // El saque suena cuando el disco se suelta, no cuando arranca la pausa:
-  // si no, se encimaría con el sonido del gol que acaba de entrar.
-  if (state.lastScorer && state.serveAtEpochMs && state.serveAtEpochMs !== prev.serveAtEpochMs) {
-    setTimeout(() => playSfx('saque'), Math.max(0, state.serveAtEpochMs - Date.now()))
   }
   if (state.pickup && !prev.pickup) playSfx('poderAparece')
   const prevTypes = new Set((prev.effects ?? []).map((e) => e.type))

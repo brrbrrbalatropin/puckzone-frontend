@@ -5,7 +5,6 @@ import esperaUrl from '../assets/sounds/espera.mp3'
 import rivalEncontradoUrl from '../assets/sounds/rival-encontrado.mp3'
 import mensajeChatUrl from '../assets/sounds/mensaje-chat.mp3'
 import inicioPartidaUrl from '../assets/sounds/inicio-partida.mp3'
-import saqueUrl from '../assets/sounds/inicio-partida-alt.mp3'
 import golFavorUrl from '../assets/sounds/gol-favor.mp3'
 import golContraUrl from '../assets/sounds/gol-contra.mp3'
 import victoriaUrl from '../assets/sounds/victoria.mp3'
@@ -20,11 +19,6 @@ import poderEscudoUrl from '../assets/sounds/poder-escudo.mp3'
 import rebote1Url from '../assets/sounds/rebote-1.mp3'
 import rebote2Url from '../assets/sounds/rebote-2.mp3'
 import rebote3Url from '../assets/sounds/rebote-3.mp3'
-import reboteAlt1Url from '../assets/sounds/rebote-alt-1.mp3'
-import reboteAlt2Url from '../assets/sounds/rebote-alt-2.mp3'
-import reboteAlt3Url from '../assets/sounds/rebote-alt-3.mp3'
-import reboteAlt4Url from '../assets/sounds/rebote-alt-4.mp3'
-import reboteAlt5Url from '../assets/sounds/rebote-alt-5.mp3'
 
 /**
  * Efectos de sonido (canal `sfx` de Ajustes). SettingsProvider empuja aquí
@@ -40,8 +34,7 @@ const SOUND_URLS = {
   espera: esperaUrl, // se entra a la cola de matchmaking
   rivalEncontrado: rivalEncontradoUrl, // el matchmaking emparejó
   mensajeChat: mensajeChatUrl, // llega un DM de otra persona
-  inicioPartida: inicioPartidaUrl, // arranque de la partida
-  saque: saqueUrl, // el disco se suelta tras la pausa de gol
+  inicioPartida: inicioPartidaUrl, // arranque de la partida, una sola vez
   golFavor: golFavorUrl, // gol propio
   golContra: golContraUrl, // gol del rival
   victoria: victoriaUrl, // fin de partida ganada
@@ -65,18 +58,10 @@ export const POWER_SFX = {
   CHAOS: 'poderCaos',
 }
 
-// Las 8 variantes de rebote se eligen al azar en cada golpe: es el sonido
-// que más se repite en una partida y una sola muestra cansa el oído.
-const REBOTE_URLS = [
-  rebote1Url,
-  rebote2Url,
-  rebote3Url,
-  reboteAlt1Url,
-  reboteAlt2Url,
-  reboteAlt3Url,
-  reboteAlt4Url,
-  reboteAlt5Url,
-]
+// Las 3 variantes de rebote se eligen al azar en cada golpe: es el sonido
+// que más se repite en una partida y una sola muestra cansa el oído. Las
+// otras 5 que llegaron en el drop se descartaron por confusas (2026-07-20).
+const REBOTE_URLS = [rebote1Url, rebote2Url, rebote3Url]
 
 let sfxVolume = 1
 
